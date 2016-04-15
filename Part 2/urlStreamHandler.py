@@ -97,7 +97,8 @@ def main(argv=None):
                         help='CSV files with a url stream to start from')
     args = parser.parse_args(argv)
 
-    all_csvs = glob.glob('./data/*.csv')
+    all_csvs = glob.glob('./data/Our own/*.csv')
+    #all_csvs = glob.glob('./data/*.csv')
     if args.csv is not None:
         all_csvs = all_csvs + args.csv
     if all_csvs is not None:
