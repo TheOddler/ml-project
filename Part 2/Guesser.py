@@ -13,8 +13,8 @@ import numpy as np
 class Guesser:
 
     def __init__(self):
-        self.known_urls = []
-        self.click_matrix = np.matrix([0.0]).copy()
+        self.known_urls = [""]
+        self.click_matrix = np.matrix([[0.0]]).copy()
 
     def learn_from_files(self, filenames):
         for filename in filenames:
@@ -28,6 +28,11 @@ class Guesser:
         print(self.click_matrix)
 
     def learn(self, text):
+        ## some checks
+        print("{} - {}".format(self.click_matrix.shape[0], self.click_matrix.shape[1]))
+        assert (self.click_matrix.shape[0] == self.click_matrix.shape[1]), "Something wrong with the dimentions of the click matrix!"
+        assert (self.click_matrix.shape[0] == len(self.known_urls)), "Something wrong with the number of known urls!"
+        
         info = self.parse_log_line(text)
         #print("Learning from: {}".format(info))
         if info != None and info.type == "click":
@@ -41,15 +46,15 @@ class Guesser:
                 self.known_urls.append(to)
                 index_to = len(self.known_urls)-1
             size = len(self.known_urls)
-            self.click_matrix.resize(size, size)
+            padding = size - self.click_matrix.shape[0]     
             
-            #print("{},{}".format(self.click_matrix.shape, size))
+            self.click_matrix = np.matrix(np.pad(self.click_matrix, pad_width=([0,padding], [0,padding]), mode='constant'))
             
-            percentage = self.click_matrix.item(index_fro, index_to)
+            percentage = self.click_matrix[index_fro, index_to]
             percentage += 0.2
             self.click_matrix[index_fro, index_to] = percentage
-            if percentage > 1:
-                print("New count {} from {} to {}".format(percentage, info.url, info.url2))
+            
+            #print("Found {} to {}: {} -> {} \n {}".format(index_fro, index_to, fro, to, self.click_matrix))
             
             row_sum = self.click_matrix[index_fro,:].sum()
             self.click_matrix[index_fro,:] = self.click_matrix[index_fro,:] / row_sum
@@ -63,7 +68,7 @@ class Guesser:
 
     def get_guesses(self, url):
         index = self.get_index(url)
-        unordered_perc = self.click_matrix[index,0:].getA1()
+        unordered_perc = self.click_matrix[index,:].getA1()
         perc, urls = zip(*sorted(zip(unordered_perc, self.known_urls), reverse=True))
         
         #print(perc)
