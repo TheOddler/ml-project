@@ -29,7 +29,6 @@ class Guesser:
 
     def learn(self, text):
         ## some checks
-        print("{} - {}".format(self.click_matrix.shape[0], self.click_matrix.shape[1]))
         assert (self.click_matrix.shape[0] == self.click_matrix.shape[1]), "Something wrong with the dimentions of the click matrix!"
         assert (self.click_matrix.shape[0] == len(self.known_urls)), "Something wrong with the number of known urls!"
         
