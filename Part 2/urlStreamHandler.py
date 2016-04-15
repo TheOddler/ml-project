@@ -14,10 +14,14 @@ import atexit
 import signal
 import glob
 
+from Guesser import Guesser
+
 date = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
 filename = "urls_{}.csv".format(date)
 logfile = open(filename, "w")
 print('Writing to {}'.format(filename))
+
+guesser = Guesser()
 
 def at_exit():
     print("Closing logfile")
@@ -39,7 +43,7 @@ class MyRequestHandler(http.server.SimpleHTTPRequestHandler):
         content = self.rfile.read(length)
         data = json.loads(content.decode(encoding='UTF-8'))
         url = data['url']
-        ts = data['ts']
+        ts = data['ts'] #timestamp
         action = data['action']
         if action == 'load':
             toppage = data['top']
@@ -58,16 +62,16 @@ class MyRequestHandler(http.server.SimpleHTTPRequestHandler):
             action_str = action
             target = ''
             print('{:<15}: {}'.format(action_str, url))
-        print('"'+ts+'", "'+action_str+'", "'+url+'", "'+target+'"',
-              file=logfile)
+        logtext = '"'+ts+'", "'+action_str+'", "'+url+'", "'+target+'"'
+        print(logtext, file=logfile)
         logfile.flush()
         
-        # TODO: Call your model to learn from url and build up a list of next
-        # guesses guesses = myModel.get_guesses(url, html)
+        # TODO: Call your model to learn from url and build up a list of next guesses
+        guesser.learn(logtext)
+        guesses = guesser.get_guesses(url)
         response = {
             'success': True,
-            'guesses': [['https://dtai.cs.kuleuven.be/events/leuveninc-visionary-seminar-machine-learning-smarter-world', 0.9],
-                        ['link2_todo', 0.5]]
+            'guesses': guesses
         }
         jsonstr = bytes(json.dumps(response), "UTF-8")
         self.send_response(200)
@@ -80,10 +84,7 @@ class MyRequestHandler(http.server.SimpleHTTPRequestHandler):
 def start_from_csv(filenames):
     """List of csv files that contain a url stream as if they were comming
     from the GreaseMonkey script."""
-    for filename in filenames:
-        with open(filename, 'r') as csv_file:
-            # TODO: Incrementally train your model based on these files
-            print('Processing {}'.format(filename))
+    guesser.learn_from_files(filenames)
 
 
 def main(argv=None):
