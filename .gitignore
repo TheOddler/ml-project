@@ -1,3 +1,6 @@
 .dropbox
 .dropbox.attr
 desktop.ini
+.spyderworkspace
+.spyderproject
+__pycache__
