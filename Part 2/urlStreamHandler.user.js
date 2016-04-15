@@ -121,18 +121,31 @@ try {
     "html": html
   }, function(response) {
     try {
-      data = JSON.parse(response.response);
-      // TODO: Do something (e.g. show a top bar with the final link of the
-      //       suspected sequence)
-      var best_guess = data.guesses[0][0];
-      var l = document.links;
-      for (var i=0; i<l.length; i++) {
-        // As a simple example, we highlight the link with the highest
-        // probability.
-        if (l[i].href == best_guess) {
-          l[i].style["background-color"]="yellow";
+        data = JSON.parse(response.response);
+        // TODO: Do something (e.g. show a top bar with the final link of the
+        //       suspected sequence)
+        var best_guess = data.guesses[0][0];
+
+        var guesses_div = document.createElement("div");
+        guesses_div.style.position = "fixed";
+        guesses_div.style.right = "0";
+        guesses_div.style.bottom = "0";
+        guesses_div.style.backgroundColor = "rgb(255, 255, 0)";
+        guesses_div.style.zIndex = "100000";
+        guesses_div.style.fontSize = "16px";
+        for (var i=0; i < data.guesses.length; ++i) {
+            var guess_link = document.createElement('a');
+            guess_link.href = data.guesses[i][0];
+            var title = "" + data.guesses[i][1] + ": " + data.guesses[i][0]
+            guess_link.title = title;
+            guess_link.appendChild(document.createTextNode(title));
+
+            var guess_div = document.createElement('div');
+            guess_div.appendChild(guess_link);
+            guesses_div.appendChild(guess_div);
         }
-      }
+        document.body.appendChild(guesses_div);
+        console.log('Successfully processed the guesses');
     } catch (e) {
       console.log('An error occured while processing the guesses', e);
     }
@@ -140,4 +153,3 @@ try {
 } catch (e) {
   console.log('An error occured', e);
 }
-
