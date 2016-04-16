@@ -9,6 +9,7 @@ import signal
 import glob
 import datetime
 import numpy as np
+from itertools import count
 
 class Guesser:
 
@@ -31,6 +32,27 @@ class Guesser:
         print('matrix:\n{}'.format(self.click_matrix))
         print('times: {}'.format(self.spend_time))
         print('size: {}'.format(len(self.known_urls)))
+    
+    def extend_data_to_include(self, url, url2):
+        index_1, index_2 = self.get_indexes(url, url2)
+        missing = index_1 < 0 or index_2 < 0
+        if missing:
+            none_index = self.get_index(None)
+            if none_index >= len(self.known_urls) - 2:
+                self.known_urls = self.known_urls + [None]*500 #extend per 500 for performance
+            if index_1 < 0:
+                self.known_urls[none_index] = url
+                none_index += 1
+            if index_2 < 0:
+                self.known_urls[none_index]  = url2
+                none_index += 1
+            size = len(self.known_urls)
+            
+            padding = size - self.click_matrix.shape[0]     
+            self.click_matrix = np.matrix(np.pad(self.click_matrix, pad_width=([0,padding], [0,padding]), mode='constant'))
+            
+            padding = size - len(self.spend_time)
+            self.spend_time = np.pad(self.spend_time, pad_width=(0, padding), mode='constant')
 
     def learn(self, text):
         ## some checks
@@ -40,18 +62,7 @@ class Guesser:
         
         info = self.parse_log_line(text)
         if info != None:
-            index_1, index_2 = self.get_indexes(info.url, info.url2)
-            if index_1 < 0:
-                self.known_urls.append(info.url)
-            if index_2 < 0:
-                self.known_urls.append(info.url2)
-            size = len(self.known_urls)
-            
-            padding = size - self.click_matrix.shape[0]     
-            self.click_matrix = np.matrix(np.pad(self.click_matrix, pad_width=([0,padding], [0,padding]), mode='constant'))
-            
-            padding = size - len(self.spend_time)
-            self.spend_time = np.pad(self.spend_time, pad_width=(0, padding), mode='constant')
+            self.extend_data_to_include(info.url, info.url2)
             
             #print("Learning {} from {} to {} at {}".format(info.type, info.url, info.url2, info.time))
         
@@ -110,15 +121,15 @@ class Guesser:
         
         index = self.get_index(url)
         unordered_weights = total_matrix[index,:].getA1()
-        weights, urls = zip(*sorted(zip(unordered_weights, self.known_urls), reverse=True))
+        weights, __, urls = zip(*sorted(zip(unordered_weights, count(), self.known_urls), reverse=True))
         
         #print(perc)
         #print(urls)
         print("Guessing for ({}) {}".format(index, url))
         
-        count = min(10, len(urls))
+        url_limit = min(10, len(urls))
         result = []
-        for i in range(count):
+        for i in range(url_limit):
             if weights[i] > 0:
                 result.append([urls[i], weights[i]])
         
