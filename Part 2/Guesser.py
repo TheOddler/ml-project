@@ -1,66 +1,127 @@
-import sys
-import argparse
-import json
-import http.server
-import socketserver
-import datetime
-import atexit
-import signal
-import glob
 import datetime
 import numpy as np
 
 class Guesser:
 
     def __init__(self):
-        self.known_urls = [""]
+        self.known_urls = [""] #to catch empty second url for "load" for example
         self.click_matrix = np.matrix([[0.0]]).copy()
+        self.spend_time = [0.0]
+        
+        self.time_dictionary = {}
 
     # aangepast niet op volgerde maar op 
     # open die file check de eerste lijn
     def learn_from_files(self, filenames):
+        
+        file_times = []
+        proper_file_names = []
+        removed_file_names = []
         for filename in filenames:
             with open(filename, 'r') as csv_file:
+                info = None
+                for line in csv_file:
+                    info = self.parse_log_line(line)
+                    if info is not None:
+                        break
+                if info is not None:
+                    file_times.append(info.time)
+                    proper_file_names.append(filename)
+                else:
+                    removed_file_names.append(filename)
+        
+        file_times, proper_file_names = zip(*sorted(zip(file_times, proper_file_names), key=lambda x: x[0]))
+        
+        #print("File Times: {}".format(file_times))
+        #print("File Names: {}".format(proper_file_names))
+        
+        print("Removed files (empty or crap): {}".format(removed_file_names))
+        for i in range(len(proper_file_names)):
+            filename = proper_file_names[i]
+            time = file_times[i]
+            with open(filename, 'r') as csv_file:
                 # Incrementally train your model based on these files
-                print('Processing {}'.format(filename))
+                print('Processing ({}) -> {}'.format(time, filename))
                 for line in csv_file:
                     self.learn(line)
         print('Learned info:')
-        print('urls: {}'.format(self.known_urls))
-        print(self.click_matrix)
+        print('urls (first 100): {}...'.format(self.known_urls[0:100]))
+        print('matrix:\n{}'.format(self.click_matrix))
+        print('times (first 100): {}'.format(self.spend_time[0:100]))
+        print('size: {}'.format(sum(x is not None for x in self.known_urls)))
+    
+    def extend_data_to_include(self, url, url2):
+        index_1, index_2 = self.get_indexes(url, url2)
+        missing = index_1 < 0 or index_2 < 0
+        if missing:
+            none_index = self.get_index(None)
+            if none_index >= len(self.known_urls) - 2:
+                self.known_urls = self.known_urls + [None]*500 #extend per 500 for performance
+            if index_1 < 0:
+                self.known_urls[none_index] = url
+                none_index += 1
+            if index_2 < 0:
+                self.known_urls[none_index]  = url2
+                none_index += 1
+            size = len(self.known_urls)
+            
+            padding = size - self.click_matrix.shape[0]     
+            self.click_matrix = np.matrix(np.pad(self.click_matrix, pad_width=([0,padding], [0,padding]), mode='constant'))
+            
+            padding = size - len(self.spend_time)
+            self.spend_time = np.pad(self.spend_time, pad_width=(0, padding), mode='constant')
 
     def learn(self, text):
         ## some checks
         assert (self.click_matrix.shape[0] == self.click_matrix.shape[1]), "Something wrong with the dimentions of the click matrix!"
         assert (self.click_matrix.shape[0] == len(self.known_urls)), "Something wrong with the number of known urls!"
+        assert (len(self.spend_time) == len(self.known_urls)), "Time/url mismatch: {}-{}".format(len(self.spend_time), len(self.known_urls))
         
         info = self.parse_log_line(text)
-        #print("Learning from: {}".format(info))
-        if info != None and info.type == "click":
-            fro = info.url #from is a keyword, so fro will have to do
-            to = info.url2
-            index_fro, index_to = self.get_indexes(fro, to)
-            if index_fro < 0:
-                self.known_urls.append(fro)
-                index_fro = len(self.known_urls)-1
-            if index_to < 0:
-                self.known_urls.append(to)
-                index_to = len(self.known_urls)-1
-            size = len(self.known_urls)
-            padding = size - self.click_matrix.shape[0]     
+        if info != None:
+            self.extend_data_to_include(info.url, info.url2)
             
-            self.click_matrix = np.matrix(np.pad(self.click_matrix, pad_width=([0,padding], [0,padding]), mode='constant'))
-            
-            percentage = self.click_matrix[index_fro, index_to]
-            percentage += 0.2
-            self.click_matrix[index_fro, index_to] = percentage
-            
-            #print("Found {} to {}: {} -> {} \n {}".format(index_fro, index_to, fro, to, self.click_matrix))
-            
-            #normalize the row
-            row_sum = self.click_matrix[index_fro,:].sum() #moet altijd 1,2 zijn behalve in begin 0,2
-            self.click_matrix[index_fro,:] = self.click_matrix[index_fro,:] / row_sum
-            
+
+            #print("Learning {} from {} to {} at {}".format(info.type, info.url, info.url2, info.time))
+        
+            if info.type == "click":
+                self.learn_click(info)
+            elif info.type == "load":
+                self.learn_load_unload(info)
+            elif info.type == "beforeunload":
+                self.learn_load_unload(info)
+    
+    def learn_load_unload(self, info):
+        #print("learn_load_unload {}: {}".format(info.type, info.url))
+        if info.type == "load":
+            self.time_dictionary[info.url] = info.time
+            #print("Load: {}".format(info.url))
+        elif info.type == "beforeunload":
+            if info.url in self.time_dictionary:
+                delta_t = info.time - self.time_dictionary[info.url]
+                del self.time_dictionary[info.url]
+                index = self.get_index(info.url)
+                self.spend_time[index] += delta_t.total_seconds()
+                #print("known unload: {}".format(info.url))
+            #else: #ignore
+                #print("unknown unload: {}".format(info.url))
+                
+    
+    def learn_click(self, info):
+        assert (info.type == "click"), "Trying to learn from something non-clicky"
+        fro = info.url #from is a keyword, so fro will have to do
+        to = info.url2
+        index_fro, index_to = self.get_indexes(fro, to)
+        
+        percentage = self.click_matrix[index_fro, index_to]
+        percentage += 0.2
+        self.click_matrix[index_fro, index_to] = percentage
+        
+        #print("Found {} to {}: {} -> {} \n {}".format(index_fro, index_to, fro, to, self.click_matrix))
+        
+        row_sum = self.click_matrix[index_fro,:].sum()
+        self.click_matrix[index_fro,:] = self.click_matrix[index_fro,:] / row_sum
+        
     def get_indexes(self, fro, to):
         return self.get_index(fro), self.get_index(to)
         
@@ -69,6 +130,7 @@ class Guesser:
         except: return -1
 
     def get_guesses(self, url):
+        url = self.clean_url(url)
         
         # klik matrix enkel eerste stap
         # multi matrix is kans na multi stappen op bepaalde link belandt
@@ -86,32 +148,22 @@ class Guesser:
         
         # neem de huidige url
         index = self.get_index(url)
-        # neem de rij van de huidige url
-        # gewichtjes van al de mogelijke urls
-        # sorteer die
-        # zie de url die de meeste kans heeft om de volgende te zijn
-        unordered_perc = total_matrix[index,:].getA1()
-        # sorteer op die gewichtjes
-        # known_urls list wordt in sync gehouden
-        # sorteer die tezamen gebaseerd op unordered_weigths
-        # reverse=true -> grootste eerst
-        perc, urls = zip(*sorted(zip(unordered_perc, self.known_urls), reverse=True))
+        unordered_weights = total_matrix[index,:].getA1()
+        unordered_weights = [a*b for a,b in zip(unordered_weights, self.spend_time)]
+        weights, urls = zip(*sorted(zip(unordered_weights, self.known_urls), reverse=True, key=lambda x: x[0]))
         
         #debug info
         #print(perc)
         #print(urls)
         print("Guessing for ({}) {}".format(index, url))
         
-        # de tien gokken met de hoogste waarde
-        # return de tien hoogste 
-        # als er minder dan tien zijn, print die dan
-        # als er urls zijn met waarde0 die worden dan genegeerd
-        count = min(10, len(urls))
+
+        url_limit = min(10, len(urls))
         result = []
-        for i in range(count):
-            if perc[i] > 0:
-                result.append([urls[i], perc[i]])
-        # als niets kan gokken, toon sad :(
+        for i in range(url_limit):
+            if weights[i] > 0:
+                result.append([urls[i], weights[i]])
+        
         if len(result) is 0:
             result = [["Can't guess :(", 0]]
         
@@ -121,14 +173,26 @@ class Guesser:
     def parse_log_line(self, text):
         try:
             words = [w.strip().strip('"') for w in text.split(',')]
-            words[0] = datetime.datetime.strptime(words[0], "%Y-%m-%dT%H:%M:%S.%fZ")
-            return type('',(object,),{
-                    'time': words[0],
-                    'type': words[1],
-                    'url': words[2],
-                    'url2': words[3]
-                })()
+
+            url = self.clean_url(words[2])
+            if url == "":
+                return None
+            else:
+                time = datetime.datetime.strptime(words[0], "%Y-%m-%dT%H:%M:%S.%fZ")
+                url2 = self.clean_url(words[3])
+                return type('',(object,),{
+                        'time': time,
+                        'type': words[1],
+                        'url': url,
+                        'url2': url2
+                    })()
         except:
             return None
             
-            #learn from files
+    def clean_url(self, url):
+        url = url.strip()
+        url = url.split("://", 1)[-1]
+        url = url.split("www.", 1)[-1]
+        url = url.split("?", 1)[0]
+        url = url.strip("/")
+        return url
