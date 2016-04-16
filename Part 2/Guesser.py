@@ -2,6 +2,26 @@ import datetime
 import numpy as np
 
 class Guesser:
+    
+    # When clicking on an url, how much does it percentage grow?
+    # It's current percantage is increased with this, and then everything is normalized again
+    url_click_percentage_increase = 0.2
+    
+    # time-spend others multiplyer
+    # Whenever a new time-spend is added, all others are multiplied with this, thus giving more weigt to recent activity
+    # 1 just means everything will be the total time spend on that page
+    # look out with this, don't make it too small (0.9 is small already I think)
+    time_spend_others_multiplyer = 0.99
+    
+    # To prevent time outliers I use a robust fitter function:
+    # time^2/(width^2 + time^2)
+    time_width = 60.0
+    # that robust fitter function is scaled with this
+    time_scale = 60.0
+    
+    # Multi-step falloff
+    # when calculating the next N-next step change, this is scaled with this fallout to the N'th power
+    multi_step_falloff = 0.9
 
     def __init__(self):
         self.known_urls = [""] #to catch empty second url for "load" for example
@@ -98,6 +118,7 @@ class Guesser:
                 delta_t = info.time - self.time_dictionary[info.url]
                 del self.time_dictionary[info.url]
                 index = self.get_index(info.url)
+                self.spend_time *= Guesser.time_spend_others_multiplyer
                 self.spend_time[index] += delta_t.total_seconds()
                 #print("known unload: {}".format(info.url))
             #else: #ignore
@@ -111,7 +132,7 @@ class Guesser:
         index_fro, index_to = self.get_indexes(fro, to)
         
         percentage = self.click_matrix[index_fro, index_to]
-        percentage += 0.2
+        percentage += Guesser.url_click_percentage_increase
         self.click_matrix[index_fro, index_to] = percentage
         
         #print("Found {} to {}: {} -> {} \n {}".format(index_fro, index_to, fro, to, self.click_matrix))
@@ -131,13 +152,13 @@ class Guesser:
         
         multi_matrix = self.click_matrix.copy()
         total_matrix = multi_matrix
-        for i in range(10-1): # range of X gives X+1 steps
+        for i in range(1, 10): # range of X gives X+1 steps
             multi_matrix = multi_matrix * self.click_matrix
-            total_matrix += multi_matrix
+            total_matrix += (Guesser.multi_step_falloff**i) * multi_matrix
         
         index = self.get_index(url)
         unordered_weights = total_matrix[index,:].getA1()
-        unordered_weights = [a*b for a,b in zip(unordered_weights, self.spend_time)]
+        unordered_weights = [w * self.make_time_robust(t) for w,t in zip(unordered_weights, self.spend_time)]
         weights, urls = zip(*sorted(zip(unordered_weights, self.known_urls), reverse=True, key=lambda x: x[0]))
         
         #print(perc)
@@ -154,6 +175,9 @@ class Guesser:
             result = [["Can't guess :(", 0]]
         
         return result
+    
+    def make_time_robust(self, time):
+        return Guesser.time_scale * (time**2 / (Guesser.time_width**2 + time**2))
 
     def parse_log_line(self, text):
         try:
