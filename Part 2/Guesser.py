@@ -121,6 +121,7 @@ class Guesser:
         
         index = self.get_index(url)
         unordered_weights = total_matrix[index,:].getA1()
+        unordered_weights = [a*b for a,b in zip(unordered_weights, self.spend_time)]
         weights, urls = zip(*sorted(zip(unordered_weights, self.known_urls), reverse=True, key=lambda x: x[0]))
         
         #print(perc)
@@ -159,8 +160,8 @@ class Guesser:
     
     def clean_url(self, url):
         url = url.strip()
-        url = url.strip("/")
         url = url.split("://", 1)[-1]
         url = url.split("www.", 1)[-1]
         url = url.split("?", 1)[0]
+        url = url.strip("/")
         return url
