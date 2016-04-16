@@ -4,6 +4,12 @@
 	-> Ik verwacht geen erg goede resultaten
 3) "Humand test": Leer uit alle data, en maak dan nieuwe streams daaruit
 	-> Checkt of er verandering komt in gebruik als je de predictions krijgt
+4) ? 
+
+verschillende surf behaviours, verschillen in dataset
+we verwachten verschillende kliks achter elkaar 
+shell commands beperkte set en consistenter
+resultaten niet denderend maar semi intelligente dingen erover schrijven
 4) ?
 
 To Test accuracy: Check gewoon alle pagina's die geladen worden, en kijk hoeweel we er daar van predicten gebaseerd op pagina's die eerder geload worden in die file.

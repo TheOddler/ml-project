@@ -30,6 +30,8 @@ class Guesser:
         
         self.time_dictionary = {}
 
+    # aangepast niet op volgerde maar op 
+    # open die file check de eerste lijn
     def learn_from_files(self, filenames):
         
         file_times = []
@@ -99,6 +101,7 @@ class Guesser:
         if info != None:
             self.extend_data_to_include(info.url, info.url2)
             
+
             #print("Learning {} from {} to {} at {}".format(info.type, info.url, info.url2, info.time))
         
             if info.type == "click":
@@ -139,7 +142,7 @@ class Guesser:
         
         row_sum = self.click_matrix[index_fro,:].sum()
         self.click_matrix[index_fro,:] = self.click_matrix[index_fro,:] / row_sum
-            
+        
     def get_indexes(self, fro, to):
         return self.get_index(fro), self.get_index(to)
         
@@ -150,21 +153,32 @@ class Guesser:
     def get_guesses(self, url):
         url = self.clean_url(url)
         
+        # klik matrix enkel eerste stap
+        # multi matrix is kans na multi stappen op bepaalde link belandt
+        # bereken dat is 10 stapjes
+        # tel al die boel op = total matrix
+        # het zijn allemaal gewichten -> niet genormaliseerd
+        # normaliseren is niet meer nodig
+        # ze verwachten niet per se dat dat echt kansen zijn
+        # total matrix wat is de kans dt ik in 1 stap bij r/nintendo zit, binnen 2 stappen, 3 stappen, etc...
         multi_matrix = self.click_matrix.copy()
         total_matrix = multi_matrix
         for i in range(1, 10): # range of X gives X+1 steps
             multi_matrix = multi_matrix * self.click_matrix
             total_matrix += (Guesser.multi_step_falloff**i) * multi_matrix
         
+        # neem de huidige url
         index = self.get_index(url)
         unordered_weights = total_matrix[index,:].getA1()
         unordered_weights = [w * self.make_time_robust(t) for w,t in zip(unordered_weights, self.spend_time)]
         weights, urls = zip(*sorted(zip(unordered_weights, self.known_urls), reverse=True, key=lambda x: x[0]))
         
+        #debug info
         #print(perc)
         #print(urls)
         print("Guessing for ({}) {}".format(index, url))
         
+
         url_limit = min(10, len(urls))
         result = []
         for i in range(url_limit):
@@ -175,7 +189,7 @@ class Guesser:
             result = [["Can't guess :(", 0]]
         
         return result
-    
+
     def make_time_robust(self, time):
         return Guesser.time_scale * (time**2 / (Guesser.time_width**2 + time**2))
 
@@ -197,7 +211,7 @@ class Guesser:
                     })()
         except:
             return None
-    
+            
     def clean_url(self, url):
         url = url.strip()
         url = url.split("://", 1)[-1]
