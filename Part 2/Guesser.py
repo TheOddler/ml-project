@@ -111,6 +111,7 @@ class Guesser:
         except: return -1
 
     def get_guesses(self, url):
+        url = self.clean_url(url)
         
         multi_matrix = self.click_matrix.copy()
         total_matrix = multi_matrix
@@ -140,12 +141,26 @@ class Guesser:
     def parse_log_line(self, text):
         try:
             words = [w.strip().strip('"') for w in text.split(',')]
-            words[0] = datetime.datetime.strptime(words[0], "%Y-%m-%dT%H:%M:%S.%fZ")
-            return type('',(object,),{
-                    'time': words[0],
-                    'type': words[1],
-                    'url': words[2],
-                    'url2': words[3]
-                })()
+
+            url = self.clean_url(words[2])
+            if url == "":
+                return None
+            else:
+                time = datetime.datetime.strptime(words[0], "%Y-%m-%dT%H:%M:%S.%fZ")
+                url2 = self.clean_url(words[3])
+                return type('',(object,),{
+                        'time': time,
+                        'type': words[1],
+                        'url': url,
+                        'url2': url2
+                    })()
         except:
             return None
+    
+    def clean_url(self, url):
+        url = url.strip()
+        url = url.strip("/")
+        url = url.split("://", 1)[-1]
+        url = url.split("www.", 1)[-1]
+        url = url.split("?", 1)[0]
+        return url
