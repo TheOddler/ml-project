@@ -66,18 +66,31 @@ class Guesser:
         except: return -1
 
     def get_guesses(self, url):
+        
+        one_matrix = self.click_matrix
+        two_matrix = one_matrix * one_matrix
+        three_matrix = two_matrix * one_matrix
+        four_matrix = three_matrix * one_matrix
+        five_matrix = four_matrix * one_matrix
+        
+        total_matrix = one_matrix + two_matrix + three_matrix + four_matrix + five_matrix
+        
         index = self.get_index(url)
-        unordered_perc = self.click_matrix[index,:].getA1()
+        unordered_perc = total_matrix[index,:].getA1()
         perc, urls = zip(*sorted(zip(unordered_perc, self.known_urls), reverse=True))
         
         #print(perc)
         #print(urls)
+        print("Guessing for ({}) {}".format(index, url))
         
         count = min(10, len(urls))
         result = []
         for i in range(count):
             if perc[i] > 0:
                 result.append([urls[i], perc[i]])
+        
+        if len(result) is 0:
+            result = [["Can't guess :(", 0]]
         
         return result
 
