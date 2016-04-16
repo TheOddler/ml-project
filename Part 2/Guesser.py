@@ -67,13 +67,11 @@ class Guesser:
 
     def get_guesses(self, url):
         
-        one_matrix = self.click_matrix
-        two_matrix = one_matrix * one_matrix
-        three_matrix = two_matrix * one_matrix
-        four_matrix = three_matrix * one_matrix
-        five_matrix = four_matrix * one_matrix
-        
-        total_matrix = one_matrix + two_matrix + three_matrix + four_matrix + five_matrix
+        multi_matrix = self.click_matrix.copy()
+        total_matrix = multi_matrix
+        for i in range(10-1): # range of X gives X+1 steps
+            multi_matrix = multi_matrix * self.click_matrix
+            total_matrix += multi_matrix
         
         index = self.get_index(url)
         unordered_perc = total_matrix[index,:].getA1()
