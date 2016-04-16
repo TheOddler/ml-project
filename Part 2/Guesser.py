@@ -1,12 +1,3 @@
-import sys
-import argparse
-import json
-import http.server
-import socketserver
-import datetime
-import atexit
-import signal
-import glob
 import datetime
 import numpy as np
 
@@ -20,17 +11,42 @@ class Guesser:
         self.time_dictionary = {}
 
     def learn_from_files(self, filenames):
+        
+        file_times = []
+        proper_file_names = []
+        removed_file_names = []
         for filename in filenames:
             with open(filename, 'r') as csv_file:
+                info = None
+                for line in csv_file:
+                    info = self.parse_log_line(line)
+                    if info is not None:
+                        break
+                if info is not None:
+                    file_times.append(info.time)
+                    proper_file_names.append(filename)
+                else:
+                    removed_file_names.append(filename)
+        
+        file_times, proper_file_names = zip(*sorted(zip(file_times, proper_file_names), key=lambda x: x[0]))
+        
+        #print("File Times: {}".format(file_times))
+        #print("File Names: {}".format(proper_file_names))
+        
+        print("Removed files (empty or crap): {}".format(removed_file_names))
+        for i in range(len(proper_file_names)):
+            filename = proper_file_names[i]
+            time = file_times[i]
+            with open(filename, 'r') as csv_file:
                 # Incrementally train your model based on these files
-                print('Processing {}'.format(filename))
+                print('Processing ({}) -> {}'.format(time, filename))
                 for line in csv_file:
                     self.learn(line)
         print('Learned info:')
-        print('urls: {}'.format(self.known_urls))
+        print('urls (first 100): {}...'.format(self.known_urls[0:100]))
         print('matrix:\n{}'.format(self.click_matrix))
-        print('times: {}'.format(self.spend_time))
-        print('size: {}'.format(len(self.known_urls)))
+        print('times (first 100): {}'.format(self.spend_time[0:100]))
+        print('size: {}'.format(sum(x is not None for x in self.known_urls)))
     
     def extend_data_to_include(self, url, url2):
         index_1, index_2 = self.get_indexes(url, url2)
