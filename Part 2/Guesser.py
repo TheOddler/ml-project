@@ -214,8 +214,6 @@ class Guesser:
             
     def clean_url(self, url):
         url = url.strip()
-        url = url.split("://", 1)[-1]
-        url = url.split("www.", 1)[-1]
         url = url.split("?", 1)[0]
         url = url.strip("/")
         return url
