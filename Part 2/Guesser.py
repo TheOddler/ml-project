@@ -35,28 +35,32 @@ class Guesser:
         info = self.parse_log_line(text)
         #print("Learning from: {}".format(info))
         if info != None and info.type == "click":
-            fro = info.url #from is a keyword, so fro will have to do
-            to = info.url2
-            index_fro, index_to = self.get_indexes(fro, to)
-            if index_fro < 0:
-                self.known_urls.append(fro)
-                index_fro = len(self.known_urls)-1
-            if index_to < 0:
-                self.known_urls.append(to)
-                index_to = len(self.known_urls)-1
-            size = len(self.known_urls)
-            padding = size - self.click_matrix.shape[0]     
-            
-            self.click_matrix = np.matrix(np.pad(self.click_matrix, pad_width=([0,padding], [0,padding]), mode='constant'))
-            
-            percentage = self.click_matrix[index_fro, index_to]
-            percentage += 0.2
-            self.click_matrix[index_fro, index_to] = percentage
-            
-            #print("Found {} to {}: {} -> {} \n {}".format(index_fro, index_to, fro, to, self.click_matrix))
-            
-            row_sum = self.click_matrix[index_fro,:].sum()
-            self.click_matrix[index_fro,:] = self.click_matrix[index_fro,:] / row_sum
+            self.learn_click(info)
+    
+    def learn_click(self, info):
+        assert (info.type == "click"), "Trying to learn from something non-clicky"
+        fro = info.url #from is a keyword, so fro will have to do
+        to = info.url2
+        index_fro, index_to = self.get_indexes(fro, to)
+        if index_fro < 0:
+            self.known_urls.append(fro)
+            index_fro = len(self.known_urls)-1
+        if index_to < 0:
+            self.known_urls.append(to)
+            index_to = len(self.known_urls)-1
+        size = len(self.known_urls)
+        padding = size - self.click_matrix.shape[0]     
+        
+        self.click_matrix = np.matrix(np.pad(self.click_matrix, pad_width=([0,padding], [0,padding]), mode='constant'))
+        
+        percentage = self.click_matrix[index_fro, index_to]
+        percentage += 0.2
+        self.click_matrix[index_fro, index_to] = percentage
+        
+        #print("Found {} to {}: {} -> {} \n {}".format(index_fro, index_to, fro, to, self.click_matrix))
+        
+        row_sum = self.click_matrix[index_fro,:].sum()
+        self.click_matrix[index_fro,:] = self.click_matrix[index_fro,:] / row_sum
             
     def get_indexes(self, fro, to):
         return self.get_index(fro), self.get_index(to)
