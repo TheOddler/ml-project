@@ -15,9 +15,12 @@ class Guesser:
     
     # To prevent time outliers I use a robust fitter function:
     # time^2/(width^2 + time^2)
-    time_width = 60.0
+    use_robust_time = True #otherwise it's just total time
+    time_width = 60.0 #at time_width seconds it will have half the scale, at twice this it will be about the scale
     # that robust fitter function is scaled with this
-    time_scale = 60.0
+    time_scale = 120.0
+    # if this is double of the width, it will closely resemply linear but slower at the start, and top off at time_scale
+    # look at: https://www.google.com/search?q=time^2%2F%28width^2+%2B+time^2%29&ie=utf-8&oe=utf-8#q=120*%28x^2%2F%2860^2+%2B+x^2%29%29%2C+x
     
     # Multi-step falloff
     # when calculating the next N-next step change, this is scaled with this fallout to the N'th power
@@ -191,7 +194,10 @@ class Guesser:
         return result
 
     def make_time_robust(self, time):
-        return Guesser.time_scale * (time**2 / (Guesser.time_width**2 + time**2))
+        if Guesser.use_robust_time:
+            return Guesser.time_scale * (time**2 / (Guesser.time_width**2 + time**2))
+        else:
+            return time
 
     def parse_log_line(self, text):
         try:
