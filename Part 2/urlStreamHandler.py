@@ -68,7 +68,10 @@ class MyRequestHandler(http.server.SimpleHTTPRequestHandler):
         
         # TODO: Call your model to learn from url and build up a list of next guesses
         guesser.learn(logtext)
-        guesses = guesser.get_guesses(url)
+        if action_str is "load":
+            guesses = guesser.get_guesses(url)
+        else:
+            guesses = [["no need to guess again", 0]]
         response = {
             'success': True,
             'guesses': guesses
@@ -98,8 +101,8 @@ def main(argv=None):
     args = parser.parse_args(argv)
 
     #all_csvs = glob.glob('./data/Our own/*.csv')
-    all_csvs = glob.glob('./data/test/*.csv')
-    #all_csvs = glob.glob('./data/*.csv')
+    #all_csvs = glob.glob('./data/test/*.csv')
+    all_csvs = glob.glob('./data/*.csv')
     if args.csv is not None:
         all_csvs = all_csvs + args.csv
     if all_csvs is not None:
