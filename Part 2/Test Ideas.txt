@@ -1,0 +1,7 @@
+1) Leer uit 80% van de data, check hoe goed het overeen komt met de clicks van de overige 20%
+2) Hoe goed predicten andere users de clicks van iemand
+	-> Leer uit alles behalve één user, check de clicks in die ééne user zijn file, zie hoeveel er overeen komen
+	-> Ik verwacht geen erg goede resultaten
+3) "Humand test": Leer uit alle data, en maak dan nieuwe streams daaruit
+	-> Checkt of er verandering komt in gebruik als je de predictions krijgt
+4) ?
