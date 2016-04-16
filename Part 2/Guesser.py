@@ -9,7 +9,6 @@ import signal
 import glob
 import datetime
 import numpy as np
-from itertools import count
 
 class Guesser:
 
@@ -121,7 +120,7 @@ class Guesser:
         
         index = self.get_index(url)
         unordered_weights = total_matrix[index,:].getA1()
-        weights, __, urls = zip(*sorted(zip(unordered_weights, count(), self.known_urls), reverse=True))
+        weights, urls = zip(*sorted(zip(unordered_weights, self.known_urls), reverse=True, key=lambda x: x[0]))
         
         #print(perc)
         #print(urls)
