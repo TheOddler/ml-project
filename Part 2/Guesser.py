@@ -11,7 +11,7 @@ class Guesser:
     # Whenever a new time-spend is added, all others are multiplied with this, thus giving more weigt to recent activity
     # 1 just means everything will be the total time spend on that page
     # look out with this, don't make it too small (0.9 is small already I think)
-    time_spend_others_multiplyer = 0.99
+    time_spend_others_multiplyer = 1
     
     # To prevent time outliers I use a robust fitter function:
     # time^2/(width^2 + time^2)
