@@ -16,6 +16,8 @@ class Guesser:
         self.known_urls = [""]
         self.click_matrix = np.matrix([[0.0]]).copy()
 
+    # aangepast niet op volgerde maar op 
+    # open die file check de eerste lijn
     def learn_from_files(self, filenames):
         for filename in filenames:
             with open(filename, 'r') as csv_file:
@@ -55,7 +57,8 @@ class Guesser:
             
             #print("Found {} to {}: {} -> {} \n {}".format(index_fro, index_to, fro, to, self.click_matrix))
             
-            row_sum = self.click_matrix[index_fro,:].sum()
+            #normalize the row
+            row_sum = self.click_matrix[index_fro,:].sum() #moet altijd 1,2 zijn behalve in begin 0,2
             self.click_matrix[index_fro,:] = self.click_matrix[index_fro,:] / row_sum
             
     def get_indexes(self, fro, to):
@@ -67,30 +70,53 @@ class Guesser:
 
     def get_guesses(self, url):
         
+        # klik matrix enkel eerste stap
+        # multi matrix is kans na multi stappen op bepaalde link belandt
+        # bereken dat is 10 stapjes
+        # tel al die boel op = total matrix
+        # het zijn allemaal gewichten -> niet genormaliseerd
+        # normaliseren is niet meer nodig
+        # ze verwachten niet per se dat dat echt kansen zijn
+        # total matrix wat is de kans dt ik in 1 stap bij r/nintendo zit, binnen 2 stappen, 3 stappen, etc...
         multi_matrix = self.click_matrix.copy()
         total_matrix = multi_matrix
         for i in range(10-1): # range of X gives X+1 steps
             multi_matrix = multi_matrix * self.click_matrix
             total_matrix += multi_matrix
         
+        # neem de huidige url
         index = self.get_index(url)
+        # neem de rij van de huidige url
+        # gewichtjes van al de mogelijke urls
+        # sorteer die
+        # zie de url die de meeste kans heeft om de volgende te zijn
         unordered_perc = total_matrix[index,:].getA1()
+        # sorteer op die gewichtjes
+        # known_urls list wordt in sync gehouden
+        # sorteer die tezamen gebaseerd op unordered_weigths
+        # reverse=true -> grootste eerst
         perc, urls = zip(*sorted(zip(unordered_perc, self.known_urls), reverse=True))
         
+        #debug info
         #print(perc)
         #print(urls)
         print("Guessing for ({}) {}".format(index, url))
         
+        # de tien gokken met de hoogste waarde
+        # return de tien hoogste 
+        # als er minder dan tien zijn, print die dan
+        # als er urls zijn met waarde0 die worden dan genegeerd
         count = min(10, len(urls))
         result = []
         for i in range(count):
             if perc[i] > 0:
                 result.append([urls[i], perc[i]])
-        
+        # als niets kan gokken, toon sad :(
         if len(result) is 0:
             result = [["Can't guess :(", 0]]
         
         return result
+        
 
     def parse_log_line(self, text):
         try:
@@ -104,3 +130,5 @@ class Guesser:
                 })()
         except:
             return None
+            
+            #learn from files
