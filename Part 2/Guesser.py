@@ -13,8 +13,11 @@ import numpy as np
 class Guesser:
 
     def __init__(self):
-        self.known_urls = [""]
+        self.known_urls = [""] #to catch empty second url for "load" for example
         self.click_matrix = np.matrix([[0.0]]).copy()
+        self.spend_time = [0.0]
+        
+        self.time_dictionary = {}
 
     def learn_from_files(self, filenames):
         for filename in filenames:
@@ -25,33 +28,61 @@ class Guesser:
                     self.learn(line)
         print('Learned info:')
         print('urls: {}'.format(self.known_urls))
-        print(self.click_matrix)
+        print('matrix:\n{}'.format(self.click_matrix))
+        print('times: {}'.format(self.spend_time))
+        print('size: {}'.format(len(self.known_urls)))
 
     def learn(self, text):
         ## some checks
         assert (self.click_matrix.shape[0] == self.click_matrix.shape[1]), "Something wrong with the dimentions of the click matrix!"
         assert (self.click_matrix.shape[0] == len(self.known_urls)), "Something wrong with the number of known urls!"
+        assert (len(self.spend_time) == len(self.known_urls)), "Time/url mismatch: {}-{}".format(len(self.spend_time), len(self.known_urls))
         
         info = self.parse_log_line(text)
-        #print("Learning from: {}".format(info))
-        if info != None and info.type == "click":
-            self.learn_click(info)
+        if info != None:
+            index_1, index_2 = self.get_indexes(info.url, info.url2)
+            if index_1 < 0:
+                self.known_urls.append(info.url)
+            if index_2 < 0:
+                self.known_urls.append(info.url2)
+            size = len(self.known_urls)
+            
+            padding = size - self.click_matrix.shape[0]     
+            self.click_matrix = np.matrix(np.pad(self.click_matrix, pad_width=([0,padding], [0,padding]), mode='constant'))
+            
+            padding = size - len(self.spend_time)
+            self.spend_time = np.pad(self.spend_time, pad_width=(0, padding), mode='constant')
+            
+            #print("Learning {} from {} to {} at {}".format(info.type, info.url, info.url2, info.time))
+        
+            if info.type == "click":
+                self.learn_click(info)
+            elif info.type == "load":
+                self.learn_load_unload(info)
+            elif info.type == "beforeunload":
+                self.learn_load_unload(info)
+    
+    def learn_load_unload(self, info):
+        #print("learn_load_unload {}: {}".format(info.type, info.url))
+        if info.type == "load":
+            self.time_dictionary[info.url] = info.time
+            #print("Load: {}".format(info.url))
+        elif info.type == "beforeunload":
+            if info.url in self.time_dictionary:
+                delta_t = info.time - self.time_dictionary[info.url]
+                del self.time_dictionary[info.url]
+                index = self.get_index(info.url)
+                self.spend_time[index] += delta_t.total_seconds()
+                #print("known unload: {}".format(info.url))
+            #else: #ignore
+                #print("unknown unload: {}".format(info.url))
+                
     
     def learn_click(self, info):
         assert (info.type == "click"), "Trying to learn from something non-clicky"
         fro = info.url #from is a keyword, so fro will have to do
         to = info.url2
         index_fro, index_to = self.get_indexes(fro, to)
-        if index_fro < 0:
-            self.known_urls.append(fro)
-            index_fro = len(self.known_urls)-1
-        if index_to < 0:
-            self.known_urls.append(to)
-            index_to = len(self.known_urls)-1
-        size = len(self.known_urls)
-        padding = size - self.click_matrix.shape[0]     
-        
-        self.click_matrix = np.matrix(np.pad(self.click_matrix, pad_width=([0,padding], [0,padding]), mode='constant'))
         
         percentage = self.click_matrix[index_fro, index_to]
         percentage += 0.2
