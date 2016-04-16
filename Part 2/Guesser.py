@@ -74,8 +74,8 @@ class Guesser:
             total_matrix += multi_matrix
         
         index = self.get_index(url)
-        unordered_perc = total_matrix[index,:].getA1()
-        perc, urls = zip(*sorted(zip(unordered_perc, self.known_urls), reverse=True))
+        unordered_weights = total_matrix[index,:].getA1()
+        weights, urls = zip(*sorted(zip(unordered_weights, self.known_urls), reverse=True))
         
         #print(perc)
         #print(urls)
@@ -84,8 +84,8 @@ class Guesser:
         count = min(10, len(urls))
         result = []
         for i in range(count):
-            if perc[i] > 0:
-                result.append([urls[i], perc[i]])
+            if weights[i] > 0:
+                result.append([urls[i], weights[i]])
         
         if len(result) is 0:
             result = [["Can't guess :(", 0]]
