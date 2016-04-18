@@ -22,9 +22,17 @@ class Guesser:
     # if this is double of the width, it will closely resemply linear but slower at the start, and top off at time_scale
     # look at: https://www.google.com/search?q=time^2%2F%28width^2+%2B+time^2%29&ie=utf-8&oe=utf-8#q=120*%28x^2%2F%2860^2+%2B+x^2%29%29%2C+x
     
-    # Multi-step falloff
+    # How many steps the algorithm look in the click matrix
+    number_of_click_steps = 5
     # when calculating the next N-next step change, this is scaled with this fallout to the N'th power
     multi_step_falloff = 0.9
+    
+    # Whether or not to learn with derived urls
+    use_derived_urls = True
+    # urls are derived, the considered time is multiplied by this fallout to the poewr of the derivation
+    derived_time_falloff = 0.8
+    # similar to the time falloff, but for the click percentage increase
+    derived_click_falloff = 0.8
 
     def __init__(self):
         self.known_urls = [""] #to catch empty second url for "load" for example
@@ -72,6 +80,45 @@ class Guesser:
         print('matrix:\n{}'.format(self.click_matrix))
         print('times (first 100): {}'.format(self.spend_time[0:100]))
         print('size: {}'.format(sum(x is not None for x in self.known_urls)))
+
+    def learn(self, text):
+        ## some checks
+        assert (self.click_matrix.shape[0] == self.click_matrix.shape[1]), "Something wrong with the dimentions of the click matrix!"
+        assert (self.click_matrix.shape[0] == len(self.known_urls)), "Something wrong with the number of known urls!"
+        assert (len(self.spend_time) == len(self.known_urls)), "Time/url mismatch: {}-{}".format(len(self.spend_time), len(self.known_urls))
+        
+        info = self.parse_log_line(text)
+        if info != None:
+            if Guesser.use_derived_urls:
+                all_urls = [info.url]
+                all_urls.extend(self.get_derived_urls(info.url))
+                all_urls2 = [info.url2]
+                all_urls2.extend(self.get_derived_urls(info.url2))
+                
+                #print("URLS: {}".format(all_urls))
+                #print("URLS2: {}".format(all_urls2))
+                
+                for idx, url in enumerate(reversed(all_urls)):
+                    for idx2, url2 in enumerate(reversed(all_urls2)):
+                        info.url = url
+                        info.url2 = url2
+                        self.learn_info(info, idx + idx2)
+            else:
+                self.learn_info(info)
+            
+    
+    def learn_info(self, info, derived = 0):
+        assert (info is not None), "Learning from None :s"
+        self.extend_data_to_include(info.url, info.url2)
+
+        #print("Learning {} from {} to {} at {}".format(info.type, info.url, info.url2, info.time))
+    
+        if info.type == "click":
+            self.learn_click(info, derived)
+        elif info.type == "load":
+            self.learn_load_unload(info, derived)
+        elif info.type == "beforeunload":
+            self.learn_load_unload(info, derived)
     
     def extend_data_to_include(self, url, url2):
         index_1, index_2 = self.get_indexes(url, url2)
@@ -93,28 +140,8 @@ class Guesser:
             
             padding = size - len(self.spend_time)
             self.spend_time = np.pad(self.spend_time, pad_width=(0, padding), mode='constant')
-
-    def learn(self, text):
-        ## some checks
-        assert (self.click_matrix.shape[0] == self.click_matrix.shape[1]), "Something wrong with the dimentions of the click matrix!"
-        assert (self.click_matrix.shape[0] == len(self.known_urls)), "Something wrong with the number of known urls!"
-        assert (len(self.spend_time) == len(self.known_urls)), "Time/url mismatch: {}-{}".format(len(self.spend_time), len(self.known_urls))
-        
-        info = self.parse_log_line(text)
-        if info != None:
-            self.extend_data_to_include(info.url, info.url2)
-            
-
-            #print("Learning {} from {} to {} at {}".format(info.type, info.url, info.url2, info.time))
-        
-            if info.type == "click":
-                self.learn_click(info)
-            elif info.type == "load":
-                self.learn_load_unload(info)
-            elif info.type == "beforeunload":
-                self.learn_load_unload(info)
     
-    def learn_load_unload(self, info):
+    def learn_load_unload(self, info, derived):
         #print("learn_load_unload {}: {}".format(info.type, info.url))
         if info.type == "load":
             self.time_dictionary[info.url] = info.time
@@ -125,20 +152,20 @@ class Guesser:
                 del self.time_dictionary[info.url]
                 index = self.get_index(info.url)
                 self.spend_time *= Guesser.time_spend_others_multiplyer
-                self.spend_time[index] += delta_t.total_seconds()
+                self.spend_time[index] += delta_t.total_seconds() * (Guesser.derived_time_falloff ** derived)
                 #print("known unload: {}".format(info.url))
             #else: #ignore
                 #print("unknown unload: {}".format(info.url))
                 
     
-    def learn_click(self, info):
+    def learn_click(self, info, derived):
         assert (info.type == "click"), "Trying to learn from something non-clicky"
         fro = info.url #from is a keyword, so fro will have to do
         to = info.url2
         index_fro, index_to = self.get_indexes(fro, to)
         
         percentage = self.click_matrix[index_fro, index_to]
-        percentage += Guesser.url_click_percentage_increase
+        percentage += Guesser.url_click_percentage_increase * (Guesser.derived_click_falloff ** derived)
         self.click_matrix[index_fro, index_to] = percentage
         
         #print("Found {} to {}: {} -> {} \n {}".format(index_fro, index_to, fro, to, self.click_matrix))
@@ -166,7 +193,7 @@ class Guesser:
         # total matrix wat is de kans dt ik in 1 stap bij r/nintendo zit, binnen 2 stappen, 3 stappen, etc...
         multi_matrix = self.click_matrix.copy()
         total_matrix = multi_matrix
-        for i in range(1, 10): # range of X gives X+1 steps
+        for i in range(1, Guesser.number_of_click_steps): # range of X gives X+1 steps
             multi_matrix = multi_matrix * self.click_matrix
             total_matrix += (Guesser.multi_step_falloff**i) * multi_matrix
         
@@ -198,6 +225,23 @@ class Guesser:
             return Guesser.time_scale * (time**2 / (Guesser.time_width**2 + time**2))
         else:
             return time
+    
+    def get_derived_urls(self, url):
+        all = []
+        der = self.get_derived_url(url)
+        while der is not None:
+            all.append(der)
+            der = self.get_derived_url(der)
+        return all
+        
+    def get_derived_url(self, url):
+        split = url.rsplit('/', 1)
+        if len(split) <= 1:
+            return None
+        elif split[0].endswith('/'):
+            return None
+        else:
+            return split[0]
 
     def parse_log_line(self, text):
         try:
