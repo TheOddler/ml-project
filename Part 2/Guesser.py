@@ -1,5 +1,9 @@
+# encoding: utf-8
+
 import datetime
 import numpy as np
+
+from Util import Util
 
 class Guesser:
     
@@ -54,7 +58,7 @@ class Guesser:
             with open(filename, 'r') as csv_file:
                 info = None
                 for line in csv_file:
-                    info = self.parse_log_line(line)
+                    info = Util.parse_log_line(line)
                     if info is not None:
                         break
                 if info is not None:
@@ -89,13 +93,13 @@ class Guesser:
         assert (self.click_matrix.shape[0] == len(self.known_urls)), "Something wrong with the number of known urls!"
         assert (len(self.spend_time) == len(self.known_urls)), "Time/url mismatch: {}-{}".format(len(self.spend_time), len(self.known_urls))
         
-        info = self.parse_log_line(text)
+        info = Util.parse_log_line(text)
         if info != None:
             if Guesser.use_derived_urls:
                 all_urls = [info.url]
-                all_urls.extend(self.get_derived_urls(info.url))
+                all_urls.extend(Util.get_derived_urls(info.url))
                 all_urls2 = [info.url2]
-                all_urls2.extend(self.get_derived_urls(info.url2))
+                all_urls2.extend(Util.get_derived_urls(info.url2))
                 
                 #print("URLS: {}".format(all_urls))
                 #print("URLS2: {}".format(all_urls2))
@@ -185,7 +189,7 @@ class Guesser:
         except: return -1
 
     def get_guesses(self, url):
-        url = self.clean_url(url)
+        url = Util.clean_url(url)
         
         # this fills self.guesses_matrix
         if self.guesses_click_matrix is None:
@@ -195,7 +199,7 @@ class Guesser:
         index = self.get_index(url)
         unordered_weights = self.guesses_click_matrix[index,:].getA1()
         if Guesser.use_derived_urls:
-            for idx, derived_url in enumerate(self.get_derived_urls(url), start=1):
+            for idx, derived_url in enumerate(Util.get_derived_urls(url), start=1):
                 der_index = self.get_index(derived_url)
                 der_weights = self.guesses_click_matrix[der_index,:].getA1()
                 unordered_weights = [w + dw * (Guesser.devied_guess_falloff ** idx) for w,dw in zip(unordered_weights, der_weights)]
@@ -243,45 +247,3 @@ class Guesser:
             return Guesser.time_scale * (time**2 / (Guesser.time_width**2 + time**2))
         else:
             return time
-    
-    def get_derived_urls(self, url):
-        all = []                      
-        der = self.get_derived_url(url)
-        while der is not None:
-            all.append(der)
-            der = self.get_derived_url(der)
-        return all
-        
-    def get_derived_url(self, url):
-        split = url.rsplit('/', 1)
-        if len(split) <= 1:
-            return None
-        elif split[0].endswith('/'):
-            return None
-        else:
-            return split[0]
-
-    def parse_log_line(self, text):
-        try:
-            words = [w.strip().strip('"') for w in text.split(',')]
-
-            url = self.clean_url(words[2])
-            if url == "":
-                return None
-            else:
-                time = datetime.datetime.strptime(words[0], "%Y-%m-%dT%H:%M:%S.%fZ")
-                url2 = self.clean_url(words[3])
-                return type('',(object,),{
-                        'time': time,
-                        'type': words[1],
-                        'url': url,
-                        'url2': url2
-                    })()
-        except:
-            return None
-            
-    def clean_url(self, url):
-        url = url.strip()
-        url = url.split("?", 1)[0]
-        url = url.strip("/")
-        return url
