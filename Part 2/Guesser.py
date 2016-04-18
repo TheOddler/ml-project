@@ -30,11 +30,11 @@ class Guesser:
     # Whether or not to learn with derived urls
     use_derived_urls = True
     # urls are derived, the considered time is multiplied by this fallout to the poewr of the derivation
-    derived_time_falloff = 0.8
+    derived_time_falloff = 0.8 #1 means no falloff, 0 is the same as disabling this
     # similar to the time falloff, but for the click percentage increase
-    derived_click_falloff = 0.8
+    derived_click_falloff = 0.8 #1 means no falloff, 0 is the same as disabling this
     # how much do the guesses for derived urls count in the final guess, similar use of power of the derivation
-    devied_guess_falloff = 0.7
+    devied_guess_falloff = 0.7 #1 means no falloff, 0 is the same as disabling this
 
     def __init__(self):
         self.known_urls = [""] #to catch empty second url for "load" for example
@@ -42,11 +42,11 @@ class Guesser:
         self.spend_time = [0.0]
         
         self.time_dictionary = {}
+        self.guesses_click_matrix = None
 
     # aangepast niet op volgerde maar op 
     # open die file check de eerste lijn
     def learn_from_files(self, filenames):
-        
         file_times = []
         proper_file_names = []
         removed_file_names = []
@@ -71,10 +71,10 @@ class Guesser:
         print("Removed files (empty or crap): {}".format(removed_file_names))
         for i in range(len(proper_file_names)):
             filename = proper_file_names[i]
-            time = file_times[i]
+            filetime = file_times[i]
             with open(filename, 'r') as csv_file:
                 # Incrementally train your model based on these files
-                print('Processing ({}) -> {}'.format(time, filename))
+                print('Processing ({}) -> {}'.format(filetime, filename))
                 for line in csv_file:
                     self.learn(line)
         print('Learned info:')
@@ -162,6 +162,8 @@ class Guesser:
     
     def learn_click(self, info, derived):
         assert (info.type == "click"), "Trying to learn from something non-clicky"
+        self.guesses_click_matrix = None        
+        
         fro = info.url #from is a keyword, so fro will have to do
         to = info.url2
         index_fro, index_to = self.get_indexes(fro, to)
@@ -185,6 +187,42 @@ class Guesser:
     def get_guesses(self, url):
         url = self.clean_url(url)
         
+        # this fills self.guesses_matrix
+        if self.guesses_click_matrix is None:
+            self.calculate_guesses_click_matrix()
+        
+        # neem de huidige url
+        index = self.get_index(url)
+        unordered_weights = self.guesses_click_matrix[index,:].getA1()
+        if Guesser.use_derived_urls:
+            for idx, derived_url in enumerate(self.get_derived_urls(url), start=1):
+                der_index = self.get_index(derived_url)
+                der_weights = self.guesses_click_matrix[der_index,:].getA1()
+                unordered_weights = [w + dw * (Guesser.devied_guess_falloff ** idx) for w,dw in zip(unordered_weights, der_weights)]
+        
+        # add time knowledge
+        unordered_weights = [w * self.make_time_robust(t) for w,t in zip(unordered_weights, self.spend_time)]
+        weights, urls = zip(*sorted(zip(unordered_weights, self.known_urls), reverse=True, key=lambda x: x[0]))
+        
+        #debug info
+        #print(perc)
+        #print(urls)
+        print("Guessed for ({}) {}".format(index, url))
+        
+
+        url_limit = min(10, len(urls))
+        result = []
+        for i in range(url_limit):
+            if weights[i] > 0:
+                result.append([urls[i], weights[i]])
+        
+        if len(result) is 0:
+            result = [["Can't guess :(", 0]]
+        
+        return result
+    
+    def calculate_guesses_click_matrix(self):
+        print("Recalculating guesses click matrix...")
         # klik matrix enkel eerste stap
         # multi matrix is kans na multi stappen op bepaalde link belandt
         # bereken dat is 10 stapjes
@@ -198,35 +236,7 @@ class Guesser:
         for i in range(1, Guesser.number_of_click_steps): # range of X gives X+1 steps
             multi_matrix = multi_matrix * self.click_matrix
             total_matrix += (Guesser.multi_step_falloff**i) * multi_matrix
-        
-        # neem de huidige url
-        index = self.get_index(url)
-        unordered_weights = total_matrix[index,:].getA1()
-        for idx, derived_url in enumerate(self.get_derived_urls(url), start=1):
-            der_index = self.get_index(derived_url)
-            der_weights = total_matrix[der_index,:].getA1()
-            unordered_weights = [w + dw * (Guesser.devied_guess_falloff ** idx) for w,dw in zip(unordered_weights, der_weights)]
-        
-        # add time knowledge
-        unordered_weights = [w * self.make_time_robust(t) for w,t in zip(unordered_weights, self.spend_time)]
-        weights, urls = zip(*sorted(zip(unordered_weights, self.known_urls), reverse=True, key=lambda x: x[0]))
-        
-        #debug info
-        #print(perc)
-        #print(urls)
-        print("Guessing for ({}) {}".format(index, url))
-        
-
-        url_limit = min(10, len(urls))
-        result = []
-        for i in range(url_limit):
-            if weights[i] > 0:
-                result.append([urls[i], weights[i]])
-        
-        if len(result) is 0:
-            result = [["Can't guess :(", 0]]
-        
-        return result
+        self.guesses_click_matrix = total_matrix
 
     def make_time_robust(self, time):
         if Guesser.use_robust_time:
@@ -235,7 +245,7 @@ class Guesser:
             return time
     
     def get_derived_urls(self, url):
-        all = []
+        all = []                      
         der = self.get_derived_url(url)
         while der is not None:
             all.append(der)
