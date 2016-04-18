@@ -33,6 +33,8 @@ class Guesser:
     derived_time_falloff = 0.8
     # similar to the time falloff, but for the click percentage increase
     derived_click_falloff = 0.8
+    # how much do the guesses for derived urls count in the final guess, similar use of power of the derivation
+    devied_guess_falloff = 0.7
 
     def __init__(self):
         self.known_urls = [""] #to catch empty second url for "load" for example
@@ -200,6 +202,12 @@ class Guesser:
         # neem de huidige url
         index = self.get_index(url)
         unordered_weights = total_matrix[index,:].getA1()
+        for idx, derived_url in enumerate(self.get_derived_urls(url), start=1):
+            der_index = self.get_index(derived_url)
+            der_weights = total_matrix[der_index,:].getA1()
+            unordered_weights = [w + dw * (Guesser.devied_guess_falloff ** idx) for w,dw in zip(unordered_weights, der_weights)]
+        
+        # add time knowledge
         unordered_weights = [w * self.make_time_robust(t) for w,t in zip(unordered_weights, self.spend_time)]
         weights, urls = zip(*sorted(zip(unordered_weights, self.known_urls), reverse=True, key=lambda x: x[0]))
         
