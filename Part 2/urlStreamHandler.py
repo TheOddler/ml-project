@@ -13,6 +13,7 @@ import datetime
 import atexit
 import signal
 import glob
+import logging
 
 from Guesser import Guesser
 
@@ -91,6 +92,8 @@ def start_from_csv(filenames):
 
 
 def main(argv=None):
+    logging.basicConfig(level=logging.DEBUG)
+    
     parser = argparse.ArgumentParser(description='Record and suggest urls')
     parser.add_argument('--verbose', '-v', action='count',
                         help='Verbose output')
