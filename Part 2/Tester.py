@@ -2,6 +2,7 @@
 
 import sys
 import glob
+import itertools
 from random import shuffle
 
 from Util import Util
@@ -10,19 +11,98 @@ from Guesser import Guesser
 def main(argv=None):
     print("Starting tests...")
     
-    Guesser.do_debug_prints = False
+    # log to a file rather than the console
+    #log_file = open("message.log","w")
+    #sys.stdout = log_file    
+    
+    Guesser.do_debug_prints = False #disable this to prevent log clutter
+    
+    # these are overritten if you use "do_all_tests_with_settings"
     Guesser.max_number_of_guesses = 5
     Guesser.use_derived_urls = True
     TesterLogFile.use_derivatives = False
     
-    Util.print_class_vars_for(Guesser, "Guesser settings: {}")
-    Util.print_class_vars_for(TesterLogFile, "TesterLogFile settings: {}")
-    
     #do_per_user_test()
     #do_random_cross_validation_test()
-    do_time_test()    
+    #do_time_test()
+    
+    do_all_test_with_settings()
     
     print("Done doing tests.")
+
+def do_all_test_with_settings():
+    # tests are run with all combinations of these, so look out since this can become a lot!
+    list_of_max_number_of_guesses = [10]
+    list_of_url_click_percentage_increase = [0.2]
+    list_of_time_spend_others_multiplyer = [1]
+    list_of_use_robust_time = [True]
+    list_of_time_width = [60.0]
+    list_of_time_scale = [120.0]
+    list_of_number_of_click_steps = [5]
+    list_of_multi_step_falloff = [0.9]
+    
+    list_of_use_derived_urls = [True, False]
+    list_of_derived_time_falloff = [0.8]
+    list_of_derived_click_falloff = [0.8]
+    list_of_devied_guess_falloff = [0.7]
+    
+    list_of_log_file_use_derivatives = [True, False]
+    
+    for (max_number_of_guesses,
+        url_click_percentage_increase,
+        time_spend_others_multiplyer,
+        use_robust_time,
+        time_width,
+        time_scale,
+        number_of_click_steps,
+        multi_step_falloff,
+        
+        use_derived_urls,
+        derived_time_falloff,
+        derived_click_falloff,
+        devied_guess_falloff,
+        
+        log_file_use_derivatives) in itertools.product(list_of_max_number_of_guesses,
+            list_of_url_click_percentage_increase,
+            list_of_time_spend_others_multiplyer,
+            list_of_use_robust_time,
+            list_of_time_width,
+            list_of_time_scale,
+            list_of_number_of_click_steps,
+            list_of_multi_step_falloff,
+            
+            list_of_use_derived_urls,
+            list_of_derived_time_falloff,
+            list_of_derived_click_falloff,
+            list_of_devied_guess_falloff,
+            
+            list_of_log_file_use_derivatives):
+        Guesser.max_number_of_guesses = max_number_of_guesses
+        Guesser.url_click_percentage_increase = url_click_percentage_increase
+        Guesser.time_spend_others_multiplyer = time_spend_others_multiplyer
+        Guesser.use_robust_time = use_robust_time
+        Guesser.time_width = time_width
+        Guesser.time_scale = time_scale
+        Guesser.number_of_click_steps = number_of_click_steps
+        Guesser.multi_step_falloff = multi_step_falloff
+        
+        Guesser.use_derived_urls = use_derived_urls
+        Guesser.derived_time_falloff = derived_time_falloff
+        Guesser.derived_click_falloff = derived_click_falloff
+        Guesser.devied_guess_falloff = devied_guess_falloff
+        
+        TesterLogFile.use_derivatives = log_file_use_derivatives
+        
+        print()
+        print("Doing all tests with settings: ")
+        Util.print_class_vars_for(Guesser, "Guesser settings: {}")
+        Util.print_class_vars_for(TesterLogFile, "TesterLogFile settings: {}")
+        do_all_tests()
+
+def do_all_tests():
+    do_per_user_test()
+    do_random_cross_validation_test()
+    do_time_test()
     
 def do_per_user_test():
     filepaths = find_all_csv_names()[:20] # [:20] for faster debugging
