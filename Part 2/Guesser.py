@@ -11,6 +11,10 @@ class Guesser:
     # it will gues anything with a >0 wieght, and guess the 10 with highest weight
     max_number_of_guesses = 10
     
+    # If set to false, learn will be disabled. Only learning via files will acutally do stuff
+    # this makes guessing new websites much much much faster, so is nicer to use
+    use_dynamic_learning = False
+    
     # When clicking on an url, how much does it percentage grow?
     # It's current percantage is increased with this, and then everything is normalized again
     url_click_percentage_increase = 0.2
@@ -81,7 +85,7 @@ class Guesser:
                 # Incrementally train your model based on these files
                 logging.debug('Processing ({}) -> {}'.format(filetime, filename))
                 for line in csv_file:
-                    self.learn(line)
+                    self.force_learn(line)
         logging.debug('Learned info:')
         #logging.debug('urls (first 100): {}...'.format(self.known_urls[0:100]))
         #logging.debug('matrix:\n{}'.format(self.click_matrix))
@@ -89,6 +93,10 @@ class Guesser:
         logging.debug('size: {}'.format(sum(x is not None for x in self.known_urls)))
 
     def learn(self, text):
+        if Guesser.use_dynamic_learning:
+            self.force_learn(text)
+    
+    def force_learn(self, text):
         ## some checks
         assert (self.click_matrix.shape[0] == self.click_matrix.shape[1]), "Something wrong with the dimentions of the click matrix!"
         assert (self.click_matrix.shape[0] == len(self.known_urls)), "Something wrong with the number of known urls!"
@@ -106,23 +114,23 @@ class Guesser:
                     for idx2, url2 in enumerate(reversed(all_urls2)):
                         info.url = url
                         info.url2 = url2
-                        self.learn_info(info, idx + idx2)
+                        self.force_learn_from_info(info, idx + idx2)
             else:
-                self.learn_info(info)
+                self.force_learn_from_info(info)
             
     
-    def learn_info(self, info, derived = 0):
+    def force_learn_from_info(self, info, derived = 0):
         assert (info is not None), "Learning from None :s"
-        self.extend_data_to_include(info.url, info.url2)
+        self._extend_data_to_include(info.url, info.url2)
         
         if info.type == "click":
-            self.learn_click(info, derived)
+            self._learn_click(info, derived)
         elif info.type == "load":
-            self.learn_load_unload(info, derived)
+            self._learn_load_unload(info, derived)
         elif info.type == "beforeunload":
-            self.learn_load_unload(info, derived)
+            self._learn_load_unload(info, derived)
     
-    def extend_data_to_include(self, url, url2):
+    def _extend_data_to_include(self, url, url2):
         index_1, index_2 = self.get_indexes(url, url2)
         missing = index_1 < 0 or index_2 < 0
         if missing:
@@ -143,7 +151,7 @@ class Guesser:
             padding = size - len(self.spend_time)
             self.spend_time = np.pad(self.spend_time, pad_width=(0, padding), mode='constant')
     
-    def learn_load_unload(self, info, derived):
+    def _learn_load_unload(self, info, derived):
         if info.type == "load":
             self.time_dictionary[info.url] = info.time
         elif info.type == "beforeunload":
@@ -155,7 +163,7 @@ class Guesser:
                 self.spend_time[index] += delta_t.total_seconds() * (Guesser.derived_time_falloff ** derived)
                 
     
-    def learn_click(self, info, derived):
+    def _learn_click(self, info, derived):
         assert (info.type == "click"), "Trying to learn from something non-clicky"
         self.guesses_click_matrix = None        
         
