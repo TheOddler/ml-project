@@ -134,7 +134,7 @@ def do_per_user_test():
     
     total_correct_guesses, total_missed_guesses = run_test_sets(test_sets)
     
-    logging.info("User tests: {} total correct guesses, {} total missed guesses".format(total_correct_guesses, total_missed_guesses))
+    logging.info("-> User tests: {} total correct guesses, {} total missed guesses".format(total_correct_guesses, total_missed_guesses))
 
 def do_random_cross_validation_test():
     filepaths = find_all_csv_names()[:21] # [:20] for faster debugging
@@ -155,7 +155,7 @@ def do_random_cross_validation_test():
     
     total_correct_guesses, total_missed_guesses = run_test_sets(test_sets)
     
-    logging.info("Cross-validation tests: {} total correct guesses, {} total missed guesses".format(total_correct_guesses, total_missed_guesses))
+    logging.info("-> Cross-validation tests: {} total correct guesses, {} total missed guesses".format(total_correct_guesses, total_missed_guesses))
 
 def do_time_test():
     file_paths = find_all_csv_names()[:21]
@@ -189,7 +189,7 @@ def do_time_test():
     
     total_correct_guesses, total_missed_guesses = run_test_set(test_set)
     
-    logging.info("Time tests: {} total correct guesses, {} total missed guesses".format(total_correct_guesses, total_missed_guesses))
+    logging.info("-> Time tests: {} total correct guesses, {} total missed guesses".format(total_correct_guesses, total_missed_guesses))
 
 def run_test_sets(test_sets):
     '''
