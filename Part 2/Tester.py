@@ -38,8 +38,6 @@ def do_per_user_test():
         else:
             filepaths_per_user[user_number] = [filepath]
     
-    #print("Files per user: {}".format(filepaths_per_user))
-    
     # create test sets, one user is test, the others are the learning set
     test_sets = []
     for user, files in filepaths_per_user.items():
@@ -49,8 +47,6 @@ def do_per_user_test():
         test_set['learn'] = [x for y in test_set['learn'] for x in y] #flatten
         test_set['id'] = "user-{}".format(user)
         test_sets.append(test_set)
-    
-    #print("Test sets: {}".format(test_sets))
     
     total_correct_guesses, total_missed_guesses = run_test_sets(test_sets)
     
@@ -147,7 +143,7 @@ def run_test_set(test_set):
                 correct_guesses += 1
             else:
                 missed_guesses += 1
-    print("Tested {}: {} hits, {} misses".format(test_set['id'], correct_guesses, missed_guesses))
+    print("Tested set {}: {} hits, {} misses".format(test_set['id'], correct_guesses, missed_guesses))
     return correct_guesses, missed_guesses
     
 
@@ -168,7 +164,6 @@ class TesterLogFile:
         parsed_lines = [info for info in parsed_lines if info is not None]
         # get load urls as these are the ones we'll be testing on
         self.load_urls = [info.url for info in parsed_lines if info.type == "load"]
-        #print(Load urls from {}: {}".format(filepath, self.load_urls))
     
     def contains_urls_for_guesses(self, guesses, guessing_for_url, guessing_index = -1):
         '''
@@ -186,7 +181,6 @@ class TesterLogFile:
            other_urls = [x for y in other_urls for x in y] #flatten
         # find intersection
         intersection = [i for i in guesses if i in other_urls]
-        #print("Guessed urls: {}, with intersection: {}".format(urls, intersection))
         return len(intersection) > 0
 
 if __name__ == "__main__":
