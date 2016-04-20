@@ -9,6 +9,8 @@ import logging
 from Util import Util
 from Guesser import Guesser
 
+use_file_subset_for_debugging = True
+
 def main(argv=None):
     # prepare logger
     logging.basicConfig(level=logging.INFO) #set this to info to disable log clutter
@@ -109,7 +111,7 @@ def do_all_tests():
     do_time_test()
     
 def do_per_user_test():
-    filepaths = find_all_csv_names()[:20] # [:20] for faster debugging
+    filepaths = find_all_csv_names()
     
     # groups files with their user
     filepaths_per_user = {}
@@ -137,8 +139,9 @@ def do_per_user_test():
     logging.info("-> User tests: {} total correct guesses, {} total missed guesses".format(total_correct_guesses, total_missed_guesses))
 
 def do_random_cross_validation_test():
-    filepaths = find_all_csv_names()[:21] # [:20] for faster debugging
-     #randomize the sessions/files
+    filepaths = find_all_csv_names()
+    
+    #randomize the sessions/files
     shuffle(filepaths)
     #divide in 5 equal parts
     parts = [filepaths[i::5] for i in range(5)]
@@ -158,7 +161,8 @@ def do_random_cross_validation_test():
     logging.info("-> Cross-validation tests: {} total correct guesses, {} total missed guesses".format(total_correct_guesses, total_missed_guesses))
 
 def do_time_test():
-    file_paths = find_all_csv_names()[:21]
+    file_paths = find_all_csv_names()
+    
     # sort by first log
     file_times = []
     proper_file_names = []
@@ -235,6 +239,8 @@ def find_all_csv_names():
     #all_csvs = glob.glob('./data/Our own/*.csv')
     #all_csvs = glob.glob('./data/test/*.csv')
     all_csvs = glob.glob('./data/*.csv') #user-testing assumes datafiles with "/.../uXX_XX.csv" format
+    if use_file_subset_for_debugging:
+        all_csvs = all_csvs[:21] # [:20] for faster debugging
     return all_csvs
 
 class TesterLogFile:
