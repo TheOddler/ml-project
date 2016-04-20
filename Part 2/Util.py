@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import datetime
+import logging
 
 class Util:
     
@@ -53,4 +54,4 @@ class Util:
     @staticmethod
     def print_class_vars_for(clss, fomat_string = "{}"):
         class_vars = [(var, val) for (var, val) in clss.__dict__.items() if not hasattr(val, '__call__') and not var.startswith('__')]
-        print(fomat_string.format(class_vars))
+        logging.info(fomat_string.format(class_vars))

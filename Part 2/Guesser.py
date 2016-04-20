@@ -1,6 +1,7 @@
 # encoding: utf-8
 
 import numpy as np
+import logging
 
 from Util import Util
 
@@ -42,9 +43,6 @@ class Guesser:
     derived_click_falloff = 0.8 #1 means no falloff, 0 is the same as disabling this
     # how much do the guesses for derived urls count in the final guess, similar use of power of the derivation
     devied_guess_falloff = 0.7 #1 means no falloff, 0 is the same as disabling this
-    
-    # If the guesser should print stuff, usefull to disable in the tester so the log isn't cluttered
-    do_debug_prints = True
 
     def __init__(self):
         self.known_urls = [""] #to catch empty second url for "load" for example
@@ -75,20 +73,20 @@ class Guesser:
         
         file_times, proper_file_names = zip(*sorted(zip(file_times, proper_file_names), key=lambda x: x[0]))
         
-        if Guesser.do_debug_prints: print("Removed files (empty or crap): {}".format(removed_file_names))
+        logging.debug("Removed files (empty or crap): {}".format(removed_file_names))
         for i in range(len(proper_file_names)):
             filename = proper_file_names[i]
             filetime = file_times[i]
             with open(filename, 'r') as csv_file:
                 # Incrementally train your model based on these files
-                if Guesser.do_debug_prints: print('Processing ({}) -> {}'.format(filetime, filename))
+                logging.debug('Processing ({}) -> {}'.format(filetime, filename))
                 for line in csv_file:
                     self.learn(line)
-        if Guesser.do_debug_prints: print('Learned info:')
-        #if Guesser.do_debug_prints: print('urls (first 100): {}...'.format(self.known_urls[0:100]))
-        #if Guesser.do_debug_prints: print('matrix:\n{}'.format(self.click_matrix))
-        #if Guesser.do_debug_prints: print('times (first 100): {}'.format(self.spend_time[0:100]))
-        if Guesser.do_debug_prints: print('size: {}'.format(sum(x is not None for x in self.known_urls)))
+        logging.debug('Learned info:')
+        #logging.debug('urls (first 100): {}...'.format(self.known_urls[0:100]))
+        #logging.debug('matrix:\n{}'.format(self.click_matrix))
+        #logging.debug('times (first 100): {}'.format(self.spend_time[0:100]))
+        logging.debug('size: {}'.format(sum(x is not None for x in self.known_urls)))
 
     def learn(self, text):
         ## some checks
@@ -200,7 +198,7 @@ class Guesser:
         weights, urls = zip(*sorted(zip(unordered_weights, self.known_urls), reverse=True, key=lambda x: x[0]))
         
         #debug info
-        if Guesser.do_debug_prints: print("Guessed for ({}) {}".format(index, url))
+        logging.debug("Guessed for ({}) {}".format(index, url))
         
 
         url_limit = min(Guesser.max_number_of_guesses, len(urls))
@@ -215,7 +213,7 @@ class Guesser:
         return result
     
     def calculate_guesses_click_matrix(self):
-        if Guesser.do_debug_prints: print("Recalculating guesses click matrix...")
+        logging.debug("Recalculating guesses click matrix...")
         # klik matrix enkel eerste stap
         # multi matrix is kans na multi stappen op bepaalde link belandt
         # bereken dat is 10 stapjes

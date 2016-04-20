@@ -4,18 +4,21 @@ import sys
 import glob
 import itertools
 from random import shuffle
+import logging
 
 from Util import Util
 from Guesser import Guesser
 
 def main(argv=None):
-    print("Starting tests...")
+    # prepare logger
+    logging.basicConfig(level=logging.INFO) #set this to info to disable log clutter
+    logging.getLogger().handlers = [logging.StreamHandler(), logging.FileHandler("guesser.log"), ]
+    
+    logging.info("Starting tests...")
     
     # log to a file rather than the console
     #log_file = open("message.log","w")
     #sys.stdout = log_file    
-    
-    Guesser.do_debug_prints = False #disable this to prevent log clutter
     
     # these are overritten if you use "do_all_tests_with_settings"
     Guesser.max_number_of_guesses = 5
@@ -28,7 +31,7 @@ def main(argv=None):
     
     do_all_test_with_settings()
     
-    print("Done doing tests.")
+    logging.info("Done doing tests.")
 
 def do_all_test_with_settings():
     # tests are run with all combinations of these, so look out since this can become a lot!
@@ -93,8 +96,7 @@ def do_all_test_with_settings():
         
         TesterLogFile.use_derivatives = log_file_use_derivatives
         
-        print()
-        print("Doing all tests with settings: ")
+        logging.info("Doing all tests with settings: ")
         Util.print_class_vars_for(Guesser, "Guesser settings: {}")
         Util.print_class_vars_for(TesterLogFile, "TesterLogFile settings: {}")
         do_all_tests()
@@ -130,7 +132,7 @@ def do_per_user_test():
     
     total_correct_guesses, total_missed_guesses = run_test_sets(test_sets)
     
-    print("User tests: {} total correct guesses, {} total missed guesses".format(total_correct_guesses, total_missed_guesses))
+    logging.info("User tests: {} total correct guesses, {} total missed guesses".format(total_correct_guesses, total_missed_guesses))
 
 def do_random_cross_validation_test():
     filepaths = find_all_csv_names()[:21] # [:20] for faster debugging
@@ -151,7 +153,7 @@ def do_random_cross_validation_test():
     
     total_correct_guesses, total_missed_guesses = run_test_sets(test_sets)
     
-    print("Cross-validation tests: {} total correct guesses, {} total missed guesses".format(total_correct_guesses, total_missed_guesses))
+    logging.info("Cross-validation tests: {} total correct guesses, {} total missed guesses".format(total_correct_guesses, total_missed_guesses))
 
 def do_time_test():
     file_paths = find_all_csv_names()[:21]
@@ -185,7 +187,7 @@ def do_time_test():
     
     total_correct_guesses, total_missed_guesses = run_test_set(test_set)
     
-    print("Time tests: {} total correct guesses, {} total missed guesses".format(total_correct_guesses, total_missed_guesses))
+    logging.info("Time tests: {} total correct guesses, {} total missed guesses".format(total_correct_guesses, total_missed_guesses))
 
 def run_test_sets(test_sets):
     '''
@@ -223,7 +225,7 @@ def run_test_set(test_set):
                 correct_guesses += 1
             else:
                 missed_guesses += 1
-    print("Tested set {}: {} hits, {} misses".format(test_set['id'], correct_guesses, missed_guesses))
+    logging.info("Tested set {}: {} hits, {} misses".format(test_set['id'], correct_guesses, missed_guesses))
     return correct_guesses, missed_guesses
     
 
