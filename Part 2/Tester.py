@@ -15,6 +15,7 @@ def main(argv=None):
     logging.getLogger().handlers = [logging.StreamHandler(), logging.FileHandler("guesser.log"), ]
     
     logging.info("Starting tests...")
+    logging.info("---")
     
     # log to a file rather than the console
     #log_file = open("message.log","w")
@@ -100,6 +101,7 @@ def do_all_test_with_settings():
         Util.print_class_vars_for(Guesser, "Guesser settings: {}")
         Util.print_class_vars_for(TesterLogFile, "TesterLogFile settings: {}")
         do_all_tests()
+        logging.info("---")
 
 def do_all_tests():
     do_per_user_test()
