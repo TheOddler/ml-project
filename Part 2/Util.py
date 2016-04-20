@@ -8,17 +8,20 @@ class Util:
     @staticmethod
     def parse_log_line(text):
         try:
-            words = [w.strip().strip('"') for w in text.split(',')]
+            words = [w.strip(' \t\r\n"\'') for w in text.split(',')]
 
             url = Util.clean_url(words[2])
+            type_ = words[1]
             if url == "":
+                return None
+            elif type_ not in ["click", "load", "beforeunload"]:
                 return None
             else:
                 time = datetime.datetime.strptime(words[0], "%Y-%m-%dT%H:%M:%S.%fZ")
                 url2 = Util.clean_url(words[3])
                 return type('',(object,),{
                         'time': time,
-                        'type': words[1],
+                        'type': type_,
                         'url': url,
                         'url2': url2
                     })()
