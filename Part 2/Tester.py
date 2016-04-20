@@ -2,6 +2,7 @@
 
 import sys
 import glob
+from random import shuffle
 
 from Util import Util
 from Guesser import Guesser
@@ -9,11 +10,16 @@ from Guesser import Guesser
 def main(argv=None):
     print("Starting tests...")
     
+    Guesser.do_debug_prints = False
     Guesser.max_number_of_guesses = 5
     Guesser.use_derived_urls = True
     TesterLogFile.use_derivatives = True
     
-    do_per_user_test()
+    Util.print_class_vars_for(Guesser, "Guesser settings: {}")
+    Util.print_class_vars_for(TesterLogFile, "TesterLogFile settings: {}")
+    
+    #do_per_user_test()
+    do_random_cross_validation_test()
     
     print("Done doing tests.")
     
@@ -38,9 +44,8 @@ def do_per_user_test():
     for user, files in filepaths_per_user.items():
         test_set = {}
         test_set['test'] = files
-        #[item for sublist in l for item in sublist]
         test_set['learn'] = [other_files for other_user, other_files in filepaths_per_user.items() if other_user != user]
-        test_set['learn'] = [x for y in test_set['learn'] for x in y]
+        test_set['learn'] = [x for y in test_set['learn'] for x in y] #flatten
         test_set['id'] = "user-{}".format(user)
         test_sets.append(test_set)
     
@@ -49,7 +54,28 @@ def do_per_user_test():
     total_correct_guesses, total_missed_guesses = run_test_sets(test_sets)
     
     print("User tests: {} total correct guesses, {} total missed guesses".format(total_correct_guesses, total_missed_guesses))
+
+def do_random_cross_validation_test():
+    filepaths = find_all_csv_names()[:21] # [:20] for faster debugging
+     #randomize the sessions/files
+    shuffle(filepaths)
+    #divide in 5 equal parts
+    parts = [filepaths[i::5] for i in range(5)]
     
+    # generate test_sets
+    test_sets = []
+    for idx, part in enumerate(parts):
+        test_set = {}
+        test_set['test'] = part
+        test_set['learn'] = [other_part for other_part in parts if other_part is not part]
+        test_set['learn'] = [x for y in test_set['learn'] for x in y] #flatten
+        test_set['id'] = "cross-validation-part-{}".format(idx)
+        test_sets.append(test_set)
+    
+    total_correct_guesses, total_missed_guesses = run_test_sets(test_sets)
+    
+    print("Cross-validation tests: {} total correct guesses, {} total missed guesses".format(total_correct_guesses, total_missed_guesses))
+
 def run_test_sets(test_sets):
     '''
     test_sets = list of dict: {'learn', 'test', 'id'}
@@ -86,6 +112,7 @@ def run_test_set(test_set):
                 correct_guesses += 1
             else:
                 missed_guesses += 1
+    print("Tested {}: {} hits, {} misses".format(test_set['id'], correct_guesses, missed_guesses))
     return correct_guesses, missed_guesses
     
 
