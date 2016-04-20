@@ -7,6 +7,10 @@ from Util import Util
 
 class Guesser:
     
+    # the guesser will return maximum this many guesses
+    # it will gues anything with a >0 wieght, and guess the 10 with highest weight
+    max_number_of_guesses = 10
+    
     # When clicking on an url, how much does it percentage grow?
     # It's current percantage is increased with this, and then everything is normalized again
     url_click_percentage_increase = 0.2
@@ -82,9 +86,9 @@ class Guesser:
                 for line in csv_file:
                     self.learn(line)
         print('Learned info:')
-        print('urls (first 100): {}...'.format(self.known_urls[0:100]))
-        print('matrix:\n{}'.format(self.click_matrix))
-        print('times (first 100): {}'.format(self.spend_time[0:100]))
+        #print('urls (first 100): {}...'.format(self.known_urls[0:100]))
+        #print('matrix:\n{}'.format(self.click_matrix))
+        #print('times (first 100): {}'.format(self.spend_time[0:100]))
         print('size: {}'.format(sum(x is not None for x in self.known_urls)))
 
     def learn(self, text):
@@ -214,7 +218,7 @@ class Guesser:
         print("Guessed for ({}) {}".format(index, url))
         
 
-        url_limit = min(10, len(urls))
+        url_limit = min(Guesser.max_number_of_guesses, len(urls))
         result = []
         for i in range(url_limit):
             if weights[i] > 0:
