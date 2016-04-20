@@ -13,13 +13,14 @@ def main(argv=None):
     Guesser.do_debug_prints = False
     Guesser.max_number_of_guesses = 5
     Guesser.use_derived_urls = True
-    TesterLogFile.use_derivatives = True
+    TesterLogFile.use_derivatives = False
     
     Util.print_class_vars_for(Guesser, "Guesser settings: {}")
     Util.print_class_vars_for(TesterLogFile, "TesterLogFile settings: {}")
     
     #do_per_user_test()
-    do_random_cross_validation_test()
+    #do_random_cross_validation_test()
+    do_time_test()    
     
     print("Done doing tests.")
     
@@ -75,6 +76,40 @@ def do_random_cross_validation_test():
     total_correct_guesses, total_missed_guesses = run_test_sets(test_sets)
     
     print("Cross-validation tests: {} total correct guesses, {} total missed guesses".format(total_correct_guesses, total_missed_guesses))
+
+def do_time_test():
+    file_paths = find_all_csv_names()[:21]
+    # sort by first log
+    file_times = []
+    proper_file_names = []
+    removed_file_names = []
+    for filename in file_paths:
+        with open(filename, 'r') as csv_file:
+            info = None
+            for line in csv_file:
+                info = Util.parse_log_line(line)
+                if info is not None:
+                    break
+            if info is not None:
+                file_times.append(info.time)
+                proper_file_names.append(filename)
+            else:
+                removed_file_names.append(filename)
+    file_times, sorted_file_paths = zip(*sorted(zip(file_times, proper_file_names), key=lambda x: x[0]))
+    
+    number_of_files = len(sorted_file_paths)
+    limiter = int(number_of_files / 5 * 4)
+    last_part = sorted_file_paths[limiter:]
+    first_part = sorted_file_paths[:limiter]
+    
+    test_set = {}
+    test_set['test'] = last_part
+    test_set['learn'] = first_part
+    test_set['id'] = "time-test"
+    
+    total_correct_guesses, total_missed_guesses = run_test_set(test_set)
+    
+    print("Time tests: {} total correct guesses, {} total missed guesses".format(total_correct_guesses, total_missed_guesses))
 
 def run_test_sets(test_sets):
     '''
