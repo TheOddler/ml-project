@@ -11,6 +11,7 @@ def main(argv=None):
     
     Guesser.max_number_of_guesses = 5
     Guesser.use_derived_urls = True
+    TesterLogFile.use_derivatives = True
     
     do_per_user_test()
     
@@ -45,11 +46,11 @@ def do_per_user_test():
     
     #print("Test sets: {}".format(test_sets))
     
-    total_correct_guesses, total_missed_guesses = run_test_sets(test_sets, True)
+    total_correct_guesses, total_missed_guesses = run_test_sets(test_sets)
     
     print("User tests: {} total correct guesses, {} total missed guesses".format(total_correct_guesses, total_missed_guesses))
     
-def run_test_sets(test_sets, use_derivatives_in_log_file = True):
+def run_test_sets(test_sets):
     '''
     test_sets = list of dict: {'learn', 'test', 'id'}
             'learn' is a list of files to learn from
@@ -59,12 +60,12 @@ def run_test_sets(test_sets, use_derivatives_in_log_file = True):
     total_correct_guesses = 0
     total_missed_guesses = 0
     for test_set in test_sets:
-        correct_guesses, missed_guesses = run_test_set(test_set, use_derivatives_in_log_file)
+        correct_guesses, missed_guesses = run_test_set(test_set)
         total_correct_guesses += correct_guesses
         total_missed_guesses += missed_guesses
     return total_correct_guesses, total_missed_guesses
 
-def run_test_set(test_set, use_derivatives_in_log_file = True):
+def run_test_set(test_set):
     '''
     test_set = dict: {'learn', 'test', 'id'}
             'learn' is a list of files to learn from
@@ -77,7 +78,7 @@ def run_test_set(test_set, use_derivatives_in_log_file = True):
     correct_guesses = 0
     missed_guesses = 0
     for log_file in test_set['test']:
-        tester_log_file = TesterLogFile(log_file, use_derivatives = use_derivatives_in_log_file)
+        tester_log_file = TesterLogFile(log_file)
         for idx, url in enumerate(tester_log_file.load_urls[:-1]):
             info_pairs = guesser.get_guesses(url)
             guessed_urls = [url for [url, weight] in info_pairs]
@@ -96,14 +97,15 @@ def find_all_csv_names():
 
 class TesterLogFile:
     
-    def __init__(self, filepath, use_derivatives = True):
+    use_derivatives = True
+    
+    def __init__(self, filepath):
         parsed_lines = []
         with open(filepath, 'r') as lines:
             parsed_lines = [Util.parse_log_line(line) for line in lines]
         parsed_lines = [info for info in parsed_lines if info is not None]
         # get load urls as these are the ones we'll be testing on
         self.load_urls = [info.url for info in parsed_lines if info.type == "load"]
-        self.use_derivatives = use_derivatives
         #print(Load urls from {}: {}".format(filepath, self.load_urls))
     
     def contains_urls_for_guesses(self, guesses, guessing_for_url, guessing_index = -1):
@@ -116,7 +118,7 @@ class TesterLogFile:
         if guessing_index > 0:
             other_urls = other_urls[guessing_index+1:]
         
-        if self.use_derivatives:
+        if TesterLogFile.use_derivatives:
             # add derivatives
            other_urls = [[url]+Util.get_derived_urls(url) for url in other_urls]
            other_urls = [x for y in other_urls for x in y] #flatten
