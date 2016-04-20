@@ -9,6 +9,9 @@ from Guesser import Guesser
 def main(argv=None):
     print("Starting tests...")
     
+    Guesser.max_number_of_guesses = 5
+    Guesser.use_derived_urls = True
+    
     do_per_user_test()
     
     print("Done doing tests.")
@@ -37,43 +40,53 @@ def do_per_user_test():
         #[item for sublist in l for item in sublist]
         test_set['learn'] = [other_files for other_user, other_files in filepaths_per_user.items() if other_user != user]
         test_set['learn'] = [x for y in test_set['learn'] for x in y]
-        test_set['user'] = user
+        test_set['id'] = "user-{}".format(user)
         test_sets.append(test_set)
     
     #print("Test sets: {}".format(test_sets))
     
-    Guesser.max_number_of_guesses = 5
-    Guesser.use_derived_urls = True
+    total_correct_guesses, total_missed_guesses = run_test_sets(test_sets, True)
     
+    print("User tests: {} total correct guesses, {} total missed guesses".format(total_correct_guesses, total_missed_guesses))
+    
+def run_test_sets(test_sets, use_derivatives_in_log_file = True):
+    '''
+    test_sets = list of dict: {'learn', 'test', 'id'}
+            'learn' is a list of files to learn from
+            'test' is a list of files to test
+            'id' is an id for this test-set
+    '''
     total_correct_guesses = 0
     total_missed_guesses = 0
     for test_set in test_sets:
-        print("User Testing for: {}".format(test_set['user']))
-        
-        guesser = Guesser()
-        guesser.learn_from_files(test_set['learn'])
-        # do some guessing
-        correct_guesses = 0
-        missed_guesses = 0
-        for log_file in test_set['test']:
-            tester_log_file = TesterLogFile(log_file, use_derivatives = False)
-            for idx, url in enumerate(tester_log_file.load_urls[:-1]):
-                info_pairs = guesser.get_guesses(url)
-                guessed_urls = [url for [url, weight] in info_pairs]
-                if tester_log_file.contains_urls_for_guesses(guessed_urls, url, idx):
-                    correct_guesses += 1
-                else:
-                    missed_guesses += 1
+        correct_guesses, missed_guesses = run_test_set(test_set, use_derivatives_in_log_file)
         total_correct_guesses += correct_guesses
         total_missed_guesses += missed_guesses
-        print("{} correct guesses, {} missed guesses.".format(correct_guesses, missed_guesses))
-        print()
-        print()
-    print("{} total correct guesses, {} total missed guesses".format(total_correct_guesses, total_missed_guesses))
+    return total_correct_guesses, total_missed_guesses
+
+def run_test_set(test_set, use_derivatives_in_log_file = True):
+    '''
+    test_set = dict: {'learn', 'test', 'id'}
+            'learn' is a list of files to learn from
+            'test' is a list of files to test
+            'id' is an id for this test-set
+    '''
+    guesser = Guesser()
+    guesser.learn_from_files(test_set['learn'])
+    # do some guessing
+    correct_guesses = 0
+    missed_guesses = 0
+    for log_file in test_set['test']:
+        tester_log_file = TesterLogFile(log_file, use_derivatives = use_derivatives_in_log_file)
+        for idx, url in enumerate(tester_log_file.load_urls[:-1]):
+            info_pairs = guesser.get_guesses(url)
+            guessed_urls = [url for [url, weight] in info_pairs]
+            if tester_log_file.contains_urls_for_guesses(guessed_urls, url, idx):
+                correct_guesses += 1
+            else:
+                missed_guesses += 1
+    return correct_guesses, missed_guesses
     
-    # test
-    ## guess some stuff
-    ## calculate accuracy
 
 def find_all_csv_names():
     #all_csvs = glob.glob('./data/Our own/*.csv')
