@@ -134,9 +134,9 @@ def do_per_user_test():
         test_set['id'] = "user-{}".format(user)
         test_sets.append(test_set)
     
-    total_correct_guesses, total_missed_guesses = run_test_sets(test_sets)
+    total_correct_guesses, total_missed_guesses, total_correct_count, total_missed_count = run_test_sets(test_sets)
     
-    logging.info("-> User tests: {} total correct guesses, {} total missed guesses".format(total_correct_guesses, total_missed_guesses))
+    logging.info("-> User tests: {} total hits, {} total misses, {} total hit count, {} total miss count".format(total_correct_guesses, total_missed_guesses, total_correct_count, total_missed_count))
 
 def do_random_cross_validation_test():
     filepaths = find_all_csv_names()
@@ -156,9 +156,9 @@ def do_random_cross_validation_test():
         test_set['id'] = "cross-validation-part-{}".format(idx)
         test_sets.append(test_set)
     
-    total_correct_guesses, total_missed_guesses = run_test_sets(test_sets)
+    total_correct_guesses, total_missed_guesses, total_correct_count, total_missed_count = run_test_sets(test_sets)
     
-    logging.info("-> Cross-validation tests: {} total correct guesses, {} total missed guesses".format(total_correct_guesses, total_missed_guesses))
+    logging.info("-> Cross-validation tests: {} total hits, {} total misses, {} total hit count, {} total miss count".format(total_correct_guesses, total_missed_guesses, total_correct_count, total_missed_count))
 
 def do_time_test():
     file_paths = find_all_csv_names()
@@ -191,9 +191,9 @@ def do_time_test():
     test_set['learn'] = first_part
     test_set['id'] = "time-test"
     
-    total_correct_guesses, total_missed_guesses = run_test_set(test_set)
+    total_correct_guesses, total_missed_guesses, total_correct_count, total_missed_count = run_test_set(test_set)
     
-    logging.info("-> Time tests: {} total correct guesses, {} total missed guesses".format(total_correct_guesses, total_missed_guesses))
+    logging.info("-> Time tests: {} total hits, {} total misses, {} total hit count, {} total miss count".format(total_correct_guesses, total_missed_guesses, total_correct_count, total_missed_count))
 
 def run_test_sets(test_sets):
     '''
@@ -204,11 +204,15 @@ def run_test_sets(test_sets):
     '''
     total_correct_guesses = 0
     total_missed_guesses = 0
+    total_correct_count = 0
+    total_missed_count = 0
     for test_set in test_sets:
-        correct_guesses, missed_guesses = run_test_set(test_set)
+        correct_guesses, missed_guesses, correct_count, missed_count = run_test_set(test_set)
         total_correct_guesses += correct_guesses
         total_missed_guesses += missed_guesses
-    return total_correct_guesses, total_missed_guesses
+        total_correct_count += correct_count
+        total_missed_count += missed_count
+    return total_correct_guesses, total_missed_guesses, total_correct_count, total_missed_count
 
 def run_test_set(test_set):
     '''
@@ -222,17 +226,23 @@ def run_test_set(test_set):
     # do some guessing
     correct_guesses = 0
     missed_guesses = 0
+    correct_count = 0
+    missed_count = 0
     for log_file in test_set['test']:
         tester_log_file = TesterLogFile(log_file)
         for idx, url in enumerate(tester_log_file.load_urls[:-1]):
             info_pairs = guesser.get_guesses(url)
             guessed_urls = [url for [url, weight] in info_pairs]
-            if tester_log_file.contains_urls_for_guesses(guessed_urls, url, idx):
+            local_correct_count = tester_log_file.number_of_urls_for_guesses(guessed_urls, url, idx)
+            local_missed_count = len(guessed_urls) - local_correct_count
+            if local_correct_count > 0:
                 correct_guesses += 1
             else:
                 missed_guesses += 1
-    logging.info("Tested set {}: {} hits, {} misses".format(test_set['id'], correct_guesses, missed_guesses))
-    return correct_guesses, missed_guesses
+            correct_count += local_correct_count
+            missed_count += local_missed_count
+    logging.info("Tested set {}: {} hits, {} misses, {} hit count, {} miss count".format(test_set['id'], correct_guesses, missed_guesses, correct_count, missed_count))
+    return correct_guesses, missed_guesses, correct_count, missed_count
     
 
 def find_all_csv_names():
@@ -255,7 +265,7 @@ class TesterLogFile:
         # get load urls as these are the ones we'll be testing on
         self.load_urls = [info.url for info in parsed_lines if info.type == "load"]
     
-    def contains_urls_for_guesses(self, guesses, guessing_for_url, guessing_index = -1):
+    def number_of_urls_for_guesses(self, guesses, guessing_for_url, guessing_index = -1):
         '''
         guesses: a list of guesses
         guessing_for_url: the url we're guessing for
@@ -271,7 +281,7 @@ class TesterLogFile:
            other_urls = [x for y in other_urls for x in y] #flatten
         # find intersection
         intersection = [i for i in guesses if i in other_urls]
-        return len(intersection) > 0
+        return len(intersection)
 
 if __name__ == "__main__":
     sys.exit(main())
