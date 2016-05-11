@@ -17,7 +17,8 @@ class Util:
             elif type_ not in ["click", "load", "beforeunload"]:
                 return None
             else:
-                time = datetime.datetime.strptime(words[0], "%Y-%m-%dT%H:%M:%S.%fZ")
+                time = datetime.datetime.strptime(words[0],
+                                                  "%Y-%m-%dT%H:%M:%S.%fZ")
                 url2 = Util.clean_url(words[3])
                 return type('',(object,),{
                         'time': time,
@@ -56,5 +57,8 @@ class Util:
     
     @staticmethod
     def print_class_vars_for(clss, fomat_string = "{}"):
-        class_vars = [(var, val) for (var, val) in clss.__dict__.items() if not hasattr(val, '__call__') and not var.startswith('__')]
+        class_vars = [(var, val) for (var, val) 
+                        in clss.__dict__.items() 
+                        if not hasattr(val, '__call__') and 
+                        not var.startswith('__')]
         logging.info(fomat_string.format(class_vars))

@@ -13,8 +13,10 @@ use_file_subset_for_debugging = False
 
 def main(argv=None):
     # prepare logger 
-    logging.getLogger().setLevel(logging.INFO) #set this to info to disable log clutter
-    logging.getLogger().handlers = [logging.StreamHandler(), logging.FileHandler("guesser.log"), ]
+    #set this to info to disable log clutter
+    logging.getLogger().setLevel(logging.INFO) 
+    logging.getLogger().handlers = [logging.StreamHandler(), 
+                                    logging.FileHandler("guesser.log"), ]
     
     logging.info("Starting tests...")
     logging.info("---")
@@ -46,7 +48,8 @@ def do_all_tests():
     do_per_user_time_tests()
 
 def do_all_test_with_settings():
-    # tests are run with all combinations of these, so look out since this can become a lot!
+    # tests are run with all combinations of these,
+    # so look out since this can become a lot!
     list_of_max_number_of_guesses = [1,3,5]
     list_of_url_click_percentage_increase = [0.1]
     list_of_time_spend_others_multiplyer = [0.9995]
@@ -77,7 +80,8 @@ def do_all_test_with_settings():
         derived_click_falloff,
         devied_guess_falloff,
         
-        log_file_use_derivatives) in itertools.product(list_of_max_number_of_guesses,
+        log_file_use_derivatives) in itertools.product(
+            list_of_max_number_of_guesses,
             list_of_url_click_percentage_increase,
             list_of_time_spend_others_multiplyer,
             list_of_use_robust_time,
@@ -133,14 +137,18 @@ def do_inter_user_test():
     for user, files in filepaths_per_user.items():
         test_set = {}
         test_set['test'] = files
-        test_set['learn'] = [other_files for other_user, other_files in filepaths_per_user.items() if other_user != user]
+        test_set['learn'] = [other_files for other_user, other_files in 
+                            filepaths_per_user.items() if other_user != user]
         test_set['learn'] = [x for y in test_set['learn'] for x in y] #flatten
         test_set['id'] = "user-{}".format(user)
         test_sets.append(test_set)
     
-    total_correct_guesses, total_missed_guesses, total_correct_count, total_missed_count = run_test_sets(test_sets)
+    total_correct_guesses, total_missed_guesses, \
+    total_correct_count, total_missed_count = run_test_sets(test_sets)
     
-    logging.info("-> User tests: {} total hits, {} total misses, {} total hit count, {} total miss count".format(total_correct_guesses, total_missed_guesses, total_correct_count, total_missed_count))
+    logging.info("-> User tests: {} total hits, {} total misses, " 
+        "{} total hit count, {} total miss count".format(total_correct_guesses,
+                total_missed_guesses, total_correct_count, total_missed_count))
 
 def do_random_cross_validation_test():
     filepaths = find_all_csv_names()
@@ -155,14 +163,20 @@ def do_random_cross_validation_test():
     for idx, part in enumerate(parts):
         test_set = {}
         test_set['test'] = part
-        test_set['learn'] = [other_part for other_part in parts if other_part is not part]
+        test_set['learn'] = [other_part for other_part in parts if 
+                            other_part is not part]
         test_set['learn'] = [x for y in test_set['learn'] for x in y] #flatten
         test_set['id'] = "cross-validation-part-{}".format(idx)
         test_sets.append(test_set)
     
-    total_correct_guesses, total_missed_guesses, total_correct_count, total_missed_count = run_test_sets(test_sets)
+    total_correct_guesses, total_missed_guesses, \
+    total_correct_count, total_missed_count = run_test_sets(test_sets)
     
-    logging.info("-> Cross-validation tests: {} total hits, {} total misses, {} total hit count, {} total miss count".format(total_correct_guesses, total_missed_guesses, total_correct_count, total_missed_count))
+    logging.info(
+        "-> Cross-validation tests: {} total hits, {} total misses,"
+        " {} total hit count, {} total miss count"
+            .format(total_correct_guesses, total_missed_guesses, 
+                    total_correct_count, total_missed_count))
 
 def do_per_user_cross_validation_tests():
     filepaths = find_all_csv_names()
@@ -181,7 +195,8 @@ def do_per_user_cross_validation_tests():
     test_sets = []
     for user, files in filepaths_per_user.items():
         if (len(files) < 3):
-            logging.info("Ignored user {} because he has too little files".format(user))
+            logging.info(
+                "Ignored user {} because he has too little files".format(user))
         else:
             shuffle(files)
             parts = [files[i::3] for i in range(3)]
@@ -189,14 +204,21 @@ def do_per_user_cross_validation_tests():
             for idx, part in enumerate(parts):
                 test_set = {}
                 test_set['test'] = part
-                test_set['learn'] = [other_part for other_part in parts if other_part is not part]
-                test_set['learn'] = [x for y in test_set['learn'] for x in y] #flatten
-                test_set['id'] = "cross-validation-for-user-{}-part-{}".format(user, idx)
+                test_set['learn'] = [other_part for other_part in parts if 
+                                    other_part is not part]
+                #flatten
+                test_set['learn'] = [x for y in test_set['learn'] for x in y] 
+                test_set['id'] = "cross-validation-for-user-{}-part-{}".format(
+                                                                user, idx)
                 test_sets.append(test_set)
     
-    total_correct_guesses, total_missed_guesses, total_correct_count, total_missed_count = run_test_sets(test_sets)
+    total_correct_guesses, total_missed_guesses, \
+    total_correct_count, total_missed_count = run_test_sets(test_sets)
     
-    logging.info("-> Per-user Cross-validation tests: {} total hits, {} total misses, {} total hit count, {} total miss count".format(total_correct_guesses, total_missed_guesses, total_correct_count, total_missed_count))
+    logging.info("-> Per-user Cross-validation tests: {} total hits, "
+                "{} total misses, {} total hit count, {} total miss count"
+                .format(total_correct_guesses, total_missed_guesses, 
+                        total_correct_count, total_missed_count))
 
 def do_per_user_time_tests():
     filepaths = find_all_csv_names()
@@ -231,9 +253,11 @@ def do_per_user_time_tests():
                 else:
                     removed_file_names.append(filename)
         if (len(proper_file_names) < 3):
-            logging.info("Ignored user {} because he has too little files".format(user))
+            logging.info("Ignored user {} because "
+                        "he has too little files".format(user))
         else:
-            file_times, sorted_file_paths = zip(*sorted(zip(file_times, proper_file_names), key=lambda x: x[0]))
+            file_times, sorted_file_paths = zip(*sorted(zip(file_times, 
+                        proper_file_names), key=lambda x: x[0]))
             
             number_of_files = len(sorted_file_paths)
             limiter = int(number_of_files / 3)
@@ -249,9 +273,13 @@ def do_per_user_time_tests():
             test_set['id'] = "time-test-for-user-{}".format(user)
             test_sets.append(test_set)
     
-    total_correct_guesses, total_missed_guesses, total_correct_count, total_missed_count = run_test_sets(test_sets)
+    total_correct_guesses, total_missed_guesses, \
+    total_correct_count, total_missed_count = run_test_sets(test_sets)
     
-    logging.info("-> Per-user Time tests: {} total hits, {} total misses, {} total hit count, {} total miss count".format(total_correct_guesses, total_missed_guesses, total_correct_count, total_missed_count))
+    logging.info("-> Per-user Time tests: {} total hits, {} total misses, "
+                "{} total hit count, {} total miss count"
+                .format(total_correct_guesses, total_missed_guesses, 
+                        total_correct_count, total_missed_count))
 
 
 def do_time_test():
@@ -273,7 +301,9 @@ def do_time_test():
                 proper_file_names.append(filename)
             else:
                 removed_file_names.append(filename)
-    file_times, sorted_file_paths = zip(*sorted(zip(file_times, proper_file_names), key=lambda x: x[0]))
+    file_times, sorted_file_paths = zip(*sorted(zip(file_times,
+                                                    proper_file_names),
+                                                    key=lambda x: x[0]))
     
     number_of_files = len(sorted_file_paths)
     limiter = int(number_of_files / 5 * 4)
@@ -285,9 +315,13 @@ def do_time_test():
     test_set['learn'] = first_part
     test_set['id'] = "time-test"
     
-    total_correct_guesses, total_missed_guesses, total_correct_count, total_missed_count = run_test_set(test_set)
+    total_correct_guesses, total_missed_guesses, \
+    total_correct_count, total_missed_count = run_test_set(test_set)
     
-    logging.info("-> Time tests: {} total hits, {} total misses, {} total hit count, {} total miss count".format(total_correct_guesses, total_missed_guesses, total_correct_count, total_missed_count))
+    logging.info("-> Time tests: {} total hits, {} total misses, "
+                "{} total hit count, {} total miss count"
+                .format(total_correct_guesses, total_missed_guesses, 
+                        total_correct_count, total_missed_count))
 
 def run_test_sets(test_sets):
     '''
@@ -301,12 +335,14 @@ def run_test_sets(test_sets):
     total_correct_count = 0
     total_missed_count = 0
     for test_set in test_sets:
-        correct_guesses, missed_guesses, correct_count, missed_count = run_test_set(test_set)
+        correct_guesses, missed_guesses, \
+        correct_count, missed_count = run_test_set(test_set)
         total_correct_guesses += correct_guesses
         total_missed_guesses += missed_guesses
         total_correct_count += correct_count
         total_missed_count += missed_count
-    return total_correct_guesses, total_missed_guesses, total_correct_count, total_missed_count
+    return total_correct_guesses, total_missed_guesses, \
+            total_correct_count, total_missed_count
 
 def run_test_set(test_set):
     '''
@@ -327,7 +363,9 @@ def run_test_set(test_set):
         for idx, url in enumerate(tester_log_file.load_urls[:-1]):
             info_pairs = guesser.get_guesses(url)
             guessed_urls = [url for [url, weight] in info_pairs]
-            local_correct_count = tester_log_file.number_of_urls_for_guesses(guessed_urls, url, idx)
+            local_correct_count = \
+                    tester_log_file.number_of_urls_for_guesses(guessed_urls, 
+                                                               url, idx)
             local_missed_count = len(guessed_urls) - local_correct_count
             if local_correct_count > 0:
                 correct_guesses += 1
@@ -335,14 +373,18 @@ def run_test_set(test_set):
                 missed_guesses += 1
             correct_count += local_correct_count
             missed_count += local_missed_count
-    logging.info("Tested set {}: {} hits, {} misses, {} hit count, {} miss count".format(test_set['id'], correct_guesses, missed_guesses, correct_count, missed_count))
+    logging.info("Tested set {}: {} hits, {} misses, "
+                "{} hit count, {} miss count"
+                .format(test_set['id'], correct_guesses, missed_guesses, 
+                        correct_count, missed_count))
     return correct_guesses, missed_guesses, correct_count, missed_count
     
 
 def find_all_csv_names():
     #all_csvs = glob.glob('./data/Our own/*.csv')
     #all_csvs = glob.glob('./data/test/*.csv')
-    all_csvs = glob.glob('./data/*.csv') #user-testing assumes datafiles with "/.../uXX_XX.csv" format
+    all_csvs = glob.glob('./data/*.csv')
+    #user-testing assumes datafiles with "/.../uXX_XX.csv" format
     if use_file_subset_for_debugging:
         all_csvs = all_csvs[:21] # [:20] for faster debugging
     return all_csvs
@@ -357,13 +399,16 @@ class TesterLogFile:
             parsed_lines = [Util.parse_log_line(line) for line in lines]
         parsed_lines = [info for info in parsed_lines if info is not None]
         # get load urls as these are the ones we'll be testing on
-        self.load_urls = [info.url for info in parsed_lines if info.type == "load"]
+        self.load_urls = [info.url for info in parsed_lines if 
+                                            info.type == "load"]
     
-    def number_of_urls_for_guesses(self, guesses, guessing_for_url, guessing_index = -1):
+    def number_of_urls_for_guesses(self, guesses, guessing_for_url, 
+                                   guessing_index = -1):
         '''
         guesses: a list of guesses
         guessing_for_url: the url we're guessing for
-        guessing_index: the index of the url, if it's one from this log file, otherwise -1
+        guessing_index: the index of the url, 
+        if it's one from this log file, otherwise -1
         '''
         other_urls = self.load_urls.copy()
         if guessing_index > 0:
@@ -371,7 +416,8 @@ class TesterLogFile:
         
         if TesterLogFile.use_derivatives:
             # add derivatives
-           other_urls = [[url]+Util.get_derived_urls(url) for url in other_urls]
+           other_urls = [[url]+Util.get_derived_urls(url) for url in 
+                                                                  other_urls]
            other_urls = [x for y in other_urls for x in y] #flatten
         # find intersection
         intersection = [i for i in guesses if i in other_urls]
