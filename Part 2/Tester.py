@@ -9,11 +9,11 @@ import logging
 from Util import Util
 from Guesser import Guesser
 
-use_file_subset_for_debugging = True
+use_file_subset_for_debugging = False
 
 def main(argv=None):
-    # prepare logger
-    logging.basicConfig(level=logging.INFO) #set this to info to disable log clutter
+    # prepare logger 
+    logging.getLogger().setLevel(logging.INFO) #set this to info to disable log clutter
     logging.getLogger().handlers = [logging.StreamHandler(), logging.FileHandler("guesser.log"), ]
     
     logging.info("Starting tests...")
@@ -28,19 +28,28 @@ def main(argv=None):
     Guesser.use_derived_urls = True
     TesterLogFile.use_derivatives = False
     
-    #do_per_user_test()
+    #do_inter_user_test()
     #do_random_cross_validation_test()
     #do_time_test()
+    #do_per_user_cross_validation_tests()
+    #do_per_user_time_tests()
     
     do_all_test_with_settings()
     
     logging.info("Done doing tests.")
 
+def do_all_tests():
+    #do_inter_user_test()
+    #do_random_cross_validation_test()
+    #do_time_test()
+    do_per_user_cross_validation_tests()
+    do_per_user_time_tests()
+
 def do_all_test_with_settings():
     # tests are run with all combinations of these, so look out since this can become a lot!
-    list_of_max_number_of_guesses = [10]
-    list_of_url_click_percentage_increase = [0.2]
-    list_of_time_spend_others_multiplyer = [1]
+    list_of_max_number_of_guesses = [1,3,5]
+    list_of_url_click_percentage_increase = [0.1]
+    list_of_time_spend_others_multiplyer = [0.9995]
     list_of_use_robust_time = [True]
     list_of_time_width = [60.0]
     list_of_time_scale = [120.0]
@@ -49,7 +58,7 @@ def do_all_test_with_settings():
     
     list_of_use_derived_urls = [True, False]
     list_of_derived_time_falloff = [0.8]
-    list_of_derived_click_falloff = [0.8]
+    list_of_derived_click_falloff = [0.9]
     list_of_devied_guess_falloff = [0.7]
     
     list_of_log_file_use_derivatives = [True, False]
@@ -104,13 +113,8 @@ def do_all_test_with_settings():
         Util.print_class_vars_for(TesterLogFile, "TesterLogFile settings: {}")
         do_all_tests()
         logging.info("---")
-
-def do_all_tests():
-    do_per_user_test()
-    do_random_cross_validation_test()
-    do_time_test()
     
-def do_per_user_test():
+def do_inter_user_test():
     filepaths = find_all_csv_names()
     
     # groups files with their user
@@ -159,6 +163,96 @@ def do_random_cross_validation_test():
     total_correct_guesses, total_missed_guesses, total_correct_count, total_missed_count = run_test_sets(test_sets)
     
     logging.info("-> Cross-validation tests: {} total hits, {} total misses, {} total hit count, {} total miss count".format(total_correct_guesses, total_missed_guesses, total_correct_count, total_missed_count))
+
+def do_per_user_cross_validation_tests():
+    filepaths = find_all_csv_names()
+    
+    # groups files with their user
+    filepaths_per_user = {}
+    for filepath in filepaths:
+        file_id = filepath.rsplit("u",1)[-1].split(".",1)[0]
+        [user_number, file_number] = file_id.split("_")
+        
+        if user_number in filepaths_per_user:
+            filepaths_per_user[user_number].append(filepath)
+        else:
+            filepaths_per_user[user_number] = [filepath]
+    
+    test_sets = []
+    for user, files in filepaths_per_user.items():
+        if (len(files) < 3):
+            logging.info("Ignored user {} because he has too little files".format(user))
+        else:
+            shuffle(files)
+            parts = [files[i::3] for i in range(3)]
+            parts = [p for p in parts if len(p) > 0]
+            for idx, part in enumerate(parts):
+                test_set = {}
+                test_set['test'] = part
+                test_set['learn'] = [other_part for other_part in parts if other_part is not part]
+                test_set['learn'] = [x for y in test_set['learn'] for x in y] #flatten
+                test_set['id'] = "cross-validation-for-user-{}-part-{}".format(user, idx)
+                test_sets.append(test_set)
+    
+    total_correct_guesses, total_missed_guesses, total_correct_count, total_missed_count = run_test_sets(test_sets)
+    
+    logging.info("-> Per-user Cross-validation tests: {} total hits, {} total misses, {} total hit count, {} total miss count".format(total_correct_guesses, total_missed_guesses, total_correct_count, total_missed_count))
+
+def do_per_user_time_tests():
+    filepaths = find_all_csv_names()
+    
+    # groups files with their user
+    filepaths_per_user = {}
+    for filepath in filepaths:
+        file_id = filepath.rsplit("u",1)[-1].split(".",1)[0]
+        [user_number, file_number] = file_id.split("_")
+        
+        if user_number in filepaths_per_user:
+            filepaths_per_user[user_number].append(filepath)
+        else:
+            filepaths_per_user[user_number] = [filepath]
+    
+    test_sets = []
+    for user, files in filepaths_per_user.items():
+        # sort by first log
+        file_times = []
+        proper_file_names = []
+        removed_file_names = []
+        for filename in files:
+            with open(filename, 'r') as csv_file:
+                info = None
+                for line in csv_file:
+                    info = Util.parse_log_line(line)
+                    if info is not None:
+                        break
+                if info is not None:
+                    file_times.append(info.time)
+                    proper_file_names.append(filename)
+                else:
+                    removed_file_names.append(filename)
+        if (len(proper_file_names) < 3):
+            logging.info("Ignored user {} because he has too little files".format(user))
+        else:
+            file_times, sorted_file_paths = zip(*sorted(zip(file_times, proper_file_names), key=lambda x: x[0]))
+            
+            number_of_files = len(sorted_file_paths)
+            limiter = int(number_of_files / 3)
+            last_part = sorted_file_paths[:limiter]
+            first_part = sorted_file_paths[limiter:]
+            
+            #logging.warning("Last: {}".format(last_part))
+            #logging.warning("First: {}".format(first_part))
+            
+            test_set = {}
+            test_set['test'] = last_part
+            test_set['learn'] = first_part
+            test_set['id'] = "time-test-for-user-{}".format(user)
+            test_sets.append(test_set)
+    
+    total_correct_guesses, total_missed_guesses, total_correct_count, total_missed_count = run_test_sets(test_sets)
+    
+    logging.info("-> Per-user Time tests: {} total hits, {} total misses, {} total hit count, {} total miss count".format(total_correct_guesses, total_missed_guesses, total_correct_count, total_missed_count))
+
 
 def do_time_test():
     file_paths = find_all_csv_names()

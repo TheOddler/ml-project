@@ -67,7 +67,7 @@ class MyRequestHandler(http.server.SimpleHTTPRequestHandler):
         print(logtext, file=logfile)
         logfile.flush()
         
-        # TODO: Call your model to learn from url and build up a list of next guesses
+        # Call the model to learn from url and build up a list of next guesses
         guesser.learn(logtext)
         if action_str is "load":
             guesses = guesser.get_guesses(url)
@@ -92,7 +92,8 @@ def start_from_csv(filenames):
 
 
 def main(argv=None):
-    logging.basicConfig(level=logging.DEBUG)
+    logging.getLogger().setLevel(logging.DEBUG)
+    logging.getLogger().handlers = [logging.StreamHandler()]
     
     parser = argparse.ArgumentParser(description='Record and suggest urls')
     parser.add_argument('--verbose', '-v', action='count',
@@ -103,13 +104,15 @@ def main(argv=None):
                         help='CSV files with a url stream to start from')
     args = parser.parse_args(argv)
 
-    #all_csvs = glob.glob('./data/Our own/*.csv')
+    all_csvs = glob.glob('./data/Our own/*.csv')
     #all_csvs = glob.glob('./data/test/*.csv')
-    all_csvs = glob.glob('./data/*.csv')
+    #all_csvs = glob.glob('./data/*.csv')
     if args.csv is not None:
         all_csvs = all_csvs + args.csv
     if all_csvs is not None:
         start_from_csv(all_csvs)
+    else:
+        logging.debug("No log files :(")
 
     server = socketserver.TCPServer(("", args.port), MyRequestHandler)
     print("Serving at port {}".format(args.port))

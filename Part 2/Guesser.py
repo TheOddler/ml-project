@@ -17,13 +17,13 @@ class Guesser:
     
     # When clicking on an url, how much does it percentage grow?
     # It's current percantage is increased with this, and then everything is normalized again
-    url_click_percentage_increase = 0.2
+    url_click_percentage_increase = 0.1
     
     # time-spend others multiplyer
     # Whenever a new time-spend is added, all others are multiplied with this, thus giving more weigt to recent activity
     # 1 just means everything will be the total time spend on that page
     # look out with this, don't make it too small (0.9 is small already I think)
-    time_spend_others_multiplyer = 1
+    time_spend_others_multiplyer = 0.9995
     
     # To prevent time outliers I use a robust fitter function:
     # time^2/(width^2 + time^2)
@@ -44,7 +44,7 @@ class Guesser:
     # urls are derived, the considered time is multiplied by this fallout to the poewr of the derivation
     derived_time_falloff = 0.8 #1 means no falloff, 0 is the same as disabling this
     # similar to the time falloff, but for the click percentage increase
-    derived_click_falloff = 0.8 #1 means no falloff, 0 is the same as disabling this
+    derived_click_falloff = 0.9 #1 means no falloff, 0 is the same as disabling this
     # how much do the guesses for derived urls count in the final guess, similar use of power of the derivation
     devied_guess_falloff = 0.7 #1 means no falloff, 0 is the same as disabling this
 
@@ -91,6 +91,7 @@ class Guesser:
         #logging.debug('matrix:\n{}'.format(self.click_matrix))
         #logging.debug('times (first 100): {}'.format(self.spend_time[0:100]))
         logging.debug('size: {}'.format(sum(x is not None for x in self.known_urls)))
+        self.calculate_guesses_click_matrix()
 
     def learn(self, text):
         if Guesser.use_dynamic_learning:
