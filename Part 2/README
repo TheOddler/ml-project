@@ -1,8 +1,8 @@
 Requirements
 ------------
 To run this project Numpy is required.
-I simply used anaconda to install this.
-I'm quite new to Python, but I think this is the only non-default package I used.
+I simply used Anaconda to install this.
+I'm quite new to Python, but I think Numpy is the only non-default package I used.
 
 Greasemonkey is also required, not only for logging, but also for showing the suggestions.
 
